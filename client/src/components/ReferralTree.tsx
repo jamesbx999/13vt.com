@@ -1,23 +1,530 @@
-import { CalendarDays, CheckCircle2, Download, GitBranch, ShieldCheck, UserRound, XCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  GitBranch,
+  ShieldCheck,
+  UserRound,
+  XCircle,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSettings } from "@/contexts/SettingsContext";
 
-export type ReferralTreeNode = { id: string; label: string; detail?: string; children?: ReferralTreeNode[]; tone?: "root" | "branch" | "user" | "muted" };
-type ReferralTreeProps = { nodes: ReferralTreeNode[]; mode: "admin" | "user"; note?: string; title?: string };
-export type ReferralPathEvidence = { hash: string; blockNumber: number; timestamp: number | null; ticketId: string; recipient: string; registeredBy: string };
+export type ReferralTreeNode = {
+  id: string;
+  label: string;
+  detail?: string;
+  children?: ReferralTreeNode[];
+  tone?: "root" | "branch" | "user" | "muted";
+};
+type ReferralTreeProps = {
+  nodes: ReferralTreeNode[];
+  mode: "admin" | "user";
+  note?: string;
+  title?: string;
+};
+export type ReferralPathEvidence = {
+  hash: string;
+  blockNumber: number;
+  timestamp: number | null;
+  ticketId: string;
+  recipient: string;
+  registeredBy: string;
+};
 
-function flatten(nodes: ReferralTreeNode[], depth = 0): Array<{ node: ReferralTreeNode; depth: number }> { return nodes.flatMap(node => [{ node, depth }, ...flatten(node.children || [], depth + 1)]); }
-function safeXml(value: string) { return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
-function treeSvg(nodes: ReferralTreeNode[]) { const items = flatten(nodes); const width = 960; const rowHeight = 54; const height = Math.max(180, items.length * rowHeight + 40); const content = items.map(({ node, depth }, index) => { const y = 24 + index * rowHeight; const x = 24 + depth * 42; return `<rect x="${x}" y="${y}" width="${width - x - 24}" height="38" rx="10" fill="${node.tone === "root" ? "#ccfbf1" : node.tone === "branch" ? "#dbeafe" : "#ffffff"}" stroke="#cbd5e1"/><text x="${x + 14}" y="${y + 16}" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#0f172a">${safeXml(node.label)}</text>${node.detail ? `<text x="${x + 14}" y="${y + 31}" font-family="monospace" font-size="10" fill="#64748b">${safeXml(node.detail)}</text>` : ""}`; }).join(""); return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#f8fafc"/><text x="24" y="18" font-family="Arial,sans-serif" font-size="11" fill="#0f766e">Onchain Queue Referral Tree</text>${content}</svg>`; }
-function download(name: string, blob: Blob) { const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
-function exportSvg(nodes: ReferralTreeNode[]) { download("referral-tree.svg", new Blob([treeSvg(nodes)], { type: "image/svg+xml;charset=utf-8" })); }
-function exportPng(nodes: ReferralTreeNode[]) { const image = new Image(); image.onload = () => { const canvas = document.createElement("canvas"); canvas.width = 1920; canvas.height = Math.max(360, Math.round((image.height / image.width) * canvas.width)); const context = canvas.getContext("2d"); if (!context) return; context.fillStyle = "#f8fafc"; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(image, 0, 0, canvas.width, canvas.height); canvas.toBlob(blob => blob && download("referral-tree.png", blob), "image/png"); }; image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(treeSvg(nodes))}`; }
-function exportBranchCsv(branches: Array<{ label: string; count: number }>) { const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`; const body = [["Branch", "Referral Count"], ...branches.map(branch => [branch.label, branch.count])].map(row => row.map(escape).join(",")).join("\r\n"); download(`branch-statistics-${new Date().toISOString().slice(0, 10)}.csv`, new Blob([body], { type: "text/csv;charset=utf-8" })); }
+function flatten(
+  nodes: ReferralTreeNode[],
+  depth = 0
+): Array<{ node: ReferralTreeNode; depth: number }> {
+  return nodes.flatMap(node => [
+    { node, depth },
+    ...flatten(node.children || [], depth + 1),
+  ]);
+}
+function safeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+function treeSvg(nodes: ReferralTreeNode[]) {
+  const items = flatten(nodes);
+  const width = 960;
+  const rowHeight = 54;
+  const height = Math.max(180, items.length * rowHeight + 40);
+  const content = items
+    .map(({ node, depth }, index) => {
+      const y = 24 + index * rowHeight;
+      const x = 24 + depth * 42;
+      return `<rect x="${x}" y="${y}" width="${width - x - 24}" height="38" rx="10" fill="${node.tone === "root" ? "#ccfbf1" : node.tone === "branch" ? "#dbeafe" : "#ffffff"}" stroke="#cbd5e1"/><text x="${x + 14}" y="${y + 16}" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#0f172a">${safeXml(node.label)}</text>${node.detail ? `<text x="${x + 14}" y="${y + 31}" font-family="monospace" font-size="10" fill="#64748b">${safeXml(node.detail)}</text>` : ""}`;
+    })
+    .join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#f8fafc"/><text x="24" y="18" font-family="Arial,sans-serif" font-size="11" fill="#0f766e">Onchain Queue Referral Tree</text>${content}</svg>`;
+}
+function download(name: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+function exportSvg(nodes: ReferralTreeNode[]) {
+  download(
+    "referral-tree.svg",
+    new Blob([treeSvg(nodes)], { type: "image/svg+xml;charset=utf-8" })
+  );
+}
+function exportPng(nodes: ReferralTreeNode[]) {
+  const image = new Image();
+  image.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1920;
+    canvas.height = Math.max(
+      360,
+      Math.round((image.height / image.width) * canvas.width)
+    );
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.fillStyle = "#f8fafc";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      blob => blob && download("referral-tree.png", blob),
+      "image/png"
+    );
+  };
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(treeSvg(nodes))}`;
+}
+function exportBranchCsv(branches: Array<{ label: string; count: number }>) {
+  const escape = (value: unknown) =>
+    `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const body = [
+    ["Branch", "Referral Count"],
+    ...branches.map(branch => [branch.label, branch.count]),
+  ]
+    .map(row => row.map(escape).join(","))
+    .join("\r\n");
+  download(
+    `branch-statistics-${new Date().toISOString().slice(0, 10)}.csv`,
+    new Blob([body], { type: "text/csv;charset=utf-8" })
+  );
+}
 
-function TreeNode({ node, depth = 0 }: { node: ReferralTreeNode; depth?: number }) { const Icon = node.tone === "root" ? ShieldCheck : node.tone === "branch" ? GitBranch : UserRound; const tone = node.tone === "root" ? "border-teal-200 bg-teal-50 text-teal-800" : node.tone === "branch" ? "border-blue-200 bg-blue-50 text-blue-800" : node.tone === "muted" ? "border-slate-200 bg-slate-50 text-slate-500" : "border-slate-200 bg-white text-slate-700"; return <li className={depth ? "ml-4 border-l border-slate-200 pl-3 sm:ml-5 sm:pl-4" : ""}><div className={`flex items-start gap-2 rounded-xl border p-3 shadow-sm ${tone}`}><Icon size={16} className="mt-0.5 shrink-0" /><div className="min-w-0"><p className="truncate text-sm font-semibold">{node.label}</p>{node.detail && <p className="mt-1 break-all font-mono text-[10px] opacity-75">{node.detail}</p>}</div></div>{node.children?.length ? <ul className="mt-2 space-y-2">{node.children.map(child => <TreeNode key={child.id} node={child} depth={depth + 1} />)}</ul> : null}</li>; }
+function TreeNode({
+  node,
+  depth = 0,
+}: {
+  node: ReferralTreeNode;
+  depth?: number;
+}) {
+  const Icon =
+    node.tone === "root"
+      ? ShieldCheck
+      : node.tone === "branch"
+        ? GitBranch
+        : UserRound;
+  const tone =
+    node.tone === "root"
+      ? "border-teal-200 bg-teal-50 text-teal-800"
+      : node.tone === "branch"
+        ? "border-blue-200 bg-blue-50 text-blue-800"
+        : node.tone === "muted"
+          ? "border-slate-200 bg-slate-50 text-slate-500"
+          : "border-slate-200 bg-white text-slate-700";
+  return (
+    <li
+      className={
+        depth ? "ml-4 border-l border-slate-200 pl-3 sm:ml-5 sm:pl-4" : ""
+      }
+    >
+      <div
+        className={`flex items-start gap-2 rounded-xl border p-3 shadow-sm ${tone}`}
+      >
+        <Icon size={16} className="mt-0.5 shrink-0" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{node.label}</p>
+          {node.detail && (
+            <p className="mt-1 break-all font-mono text-[10px] opacity-75">
+              {node.detail}
+            </p>
+          )}
+        </div>
+      </div>
+      {node.children?.length ? (
+        <ul className="mt-2 space-y-2">
+          {node.children.map(child => (
+            <TreeNode key={child.id} node={child} depth={depth + 1} />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
 
-export function ReferralTree({ nodes, mode, note, title }: ReferralTreeProps) { const { t } = useLanguage(); return <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] sm:p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex items-center gap-2"><GitBranch size={18} className="text-teal-600" /><h2 className="text-lg font-bold">{title || (mode === "admin" ? t("adminReferralTree") : t("userReferralTree"))}</h2></div><p className="mt-1 text-xs text-slate-500">{mode === "admin" ? t("adminTreeDescription") : t("userTreeDescription")}</p></div><div className="flex flex-wrap items-center gap-2"><button onClick={() => exportSvg(nodes)} disabled={!nodes.length} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 disabled:opacity-40"><Download size={13} />SVG</button><button onClick={() => exportPng(nodes)} disabled={!nodes.length} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 disabled:opacity-40"><Download size={13} />PNG</button><span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${mode === "admin" ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700"}`}>{mode === "admin" ? t("adminView") : t("userView")}</span></div></div>{note && <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">{note}</p>}<ul className="mt-5 space-y-3">{nodes.length ? nodes.map(node => <TreeNode key={node.id} node={node} />) : <li className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">{t("noReferralTreeData")}</li>}</ul></section>; }
+export function ReferralTree({ nodes, mode, note, title }: ReferralTreeProps) {
+  const { t } = useLanguage();
+  return (
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <GitBranch size={18} className="text-teal-600" />
+            <h2 className="text-lg font-bold">
+              {title ||
+                (mode === "admin"
+                  ? t("adminReferralTree")
+                  : t("userReferralTree"))}
+            </h2>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {mode === "admin"
+              ? t("adminTreeDescription")
+              : t("userTreeDescription")}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => exportSvg(nodes)}
+            disabled={!nodes.length}
+            className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 disabled:opacity-40"
+          >
+            <Download size={13} />
+            SVG
+          </button>
+          <button
+            onClick={() => exportPng(nodes)}
+            disabled={!nodes.length}
+            className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 disabled:opacity-40"
+          >
+            <Download size={13} />
+            PNG
+          </button>
+          <span
+            className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${mode === "admin" ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700"}`}
+          >
+            {mode === "admin" ? t("adminView") : t("userView")}
+          </span>
+        </div>
+      </div>
+      {note && (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+          {note}
+        </p>
+      )}
+      <ul className="mt-5 space-y-3">
+        {nodes.length ? (
+          nodes.map(node => <TreeNode key={node.id} node={node} />)
+        ) : (
+          <li className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+            {t("noReferralTreeData")}
+          </li>
+        )}
+      </ul>
+    </section>
+  );
+}
 
-export function BranchReferralStats({ branches }: { branches: Array<{ label: string; count: number }> }) { const { t } = useLanguage(); const max = Math.max(1, ...branches.map(branch => branch.count)); return <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] sm:p-5"><div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-2"><GitBranch size={18} className="text-violet-600" /><h2 className="text-lg font-bold">{t("branchStatistics")}</h2></div><p className="mt-1 text-xs text-slate-500">{t("branchStatisticsDescription")}</p></div><button onClick={() => exportBranchCsv(branches)} disabled={!branches.length} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 disabled:opacity-40"><Download size={13} />CSV</button></div><div className="mt-5 space-y-4">{branches.length ? branches.map(branch => <div key={branch.label}><div className="mb-1 flex justify-between text-xs font-semibold text-slate-600"><span>{branch.label}</span><span>{branch.count} {t("referrals")}</span></div><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-violet-500 transition-[width] duration-300" style={{ width: `${(branch.count / max) * 100}%` }} /></div></div>) : <p className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">{t("noReferralTreeData")}</p>}</div></section>; }
+export function BranchReferralStats({
+  branches,
+}: {
+  branches: Array<{ label: string; count: number }>;
+}) {
+  const { t } = useLanguage();
+  const max = Math.max(1, ...branches.map(branch => branch.count));
+  return (
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <GitBranch size={18} className="text-violet-600" />
+            <h2 className="text-lg font-bold">{t("branchStatistics")}</h2>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {t("branchStatisticsDescription")}
+          </p>
+        </div>
+        <button
+          onClick={() => exportBranchCsv(branches)}
+          disabled={!branches.length}
+          className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 disabled:opacity-40"
+        >
+          <Download size={13} />
+          CSV
+        </button>
+      </div>
+      <div className="mt-5 space-y-4">
+        {branches.length ? (
+          branches.map(branch => (
+            <div key={branch.label}>
+              <div className="mb-1 flex justify-between text-xs font-semibold text-slate-600">
+                <span>{branch.label}</span>
+                <span>
+                  {branch.count} {t("referrals")}
+                </span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-teal-400 to-violet-500 transition-[width] duration-300"
+                  style={{ width: `${(branch.count / max) * 100}%` }}
+                />
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+            {t("noReferralTreeData")}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
 
-export function ReferralPathPanel({ events, loading, error, referrerOf }: { events: ReferralPathEvidence[]; loading: boolean; error: string; referrerOf?: string }) { const { t } = useLanguage(); const [blockFrom, setBlockFrom] = useState(""); const [blockTo, setBlockTo] = useState(""); const [dateFrom, setDateFrom] = useState(""); const [dateTo, setDateTo] = useState(""); const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo); const filtered = useMemo(() => events.filter(event => { const fromBlock = blockFrom ? event.blockNumber >= Number(blockFrom) : true; const toBlock = blockTo ? event.blockNumber <= Number(blockTo) : true; const fromDate = dateFrom ? event.timestamp !== null && event.timestamp >= new Date(`${dateFrom}T00:00:00`).getTime() : true; const toDate = dateTo ? event.timestamp !== null && event.timestamp <= new Date(`${dateTo}T23:59:59.999`).getTime() : true; return !invalidDates && fromBlock && toBlock && fromDate && toDate; }), [events, blockFrom, blockTo, dateFrom, dateTo, invalidDates]); const latest = filtered[filtered.length - 1]; const consistent = !latest || !referrerOf || latest.registeredBy.toLowerCase() === referrerOf.toLowerCase(); return <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] sm:p-5"><div className="flex items-center gap-2"><CalendarDays size={18} className="text-teal-600" /><div><h2 className="text-lg font-bold">{t("referralPath")}</h2><p className="text-xs text-slate-500">{t("referralPathDescription")}</p></div></div><div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"><input inputMode="numeric" value={blockFrom} onChange={event => setBlockFrom(event.target.value.replace(/\D/g, ""))} placeholder={t("blockFrom")} className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs sm:w-32" /><input inputMode="numeric" value={blockTo} onChange={event => setBlockTo(event.target.value.replace(/\D/g, ""))} placeholder={t("blockTo")} className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs sm:w-32" /><input type="date" value={dateFrom} onChange={event => setDateFrom(event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs sm:w-auto" /><input type="date" value={dateTo} onChange={event => setDateTo(event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs sm:w-auto" /><span className="col-span-2 self-center text-xs text-slate-500 sm:col-span-1">{filtered.length}/{events.length} {t("eventRecords")}</span></div>{invalidDates && <p className="mt-2 text-xs font-semibold text-rose-700">{t("invalidDateRange")}</p>}{referrerOf && <div className={`mt-4 flex items-start gap-2 rounded-xl border p-3 text-xs ${consistent ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{consistent ? <CheckCircle2 size={15} className="mt-0.5 shrink-0" /> : <XCircle size={15} className="mt-0.5 shrink-0" />}<span><strong>{t("consistencyCheck")}:</strong> {consistent ? t("consistencyMatch") : t("consistencyMismatch")} · {t("referrerOfLabel")} {referrerOf}</span></div>}{error ? <p className="mt-4 rounded-xl bg-rose-50 p-3 text-xs text-rose-800">{error}</p> : loading ? <p className="mt-4 text-xs text-slate-500">{t("eventPathLoading")}</p> : <div className="mt-5 space-y-0">{filtered.length ? filtered.map((event, index) => { const matches = !referrerOf || event.registeredBy.toLowerCase() === referrerOf.toLowerCase(); return <article key={`${event.hash}-${event.blockNumber}`} className="relative flex gap-3 pb-5 last:pb-0"><div className="flex w-5 shrink-0 flex-col items-center"><span className={`z-10 grid h-5 w-5 place-items-center rounded-full ring-4 ring-white ${matches ? "bg-emerald-500" : "bg-amber-500"}`} />{index < filtered.length - 1 && <span className="w-px flex-1 bg-slate-200" />}</div><div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/70 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-bold text-slate-800">{t("registeredEvent")} #{index + 1}</p><time className="text-[10px] text-slate-500">{event.timestamp ? new Date(event.timestamp).toLocaleString() : `Block ${event.blockNumber}`}</time></div><div className="mt-2 grid gap-1 text-[11px] text-slate-600 sm:grid-cols-2"><span><b>{t("ticket")}:</b> #{event.ticketId}</span><span><b>{t("block")}:</b> {event.blockNumber.toLocaleString()}</span><span className="break-all"><b>{t("registeredBy")}:</b> <code>{event.registeredBy}</code></span><span className="break-all"><b>Tx:</b> <code>{event.hash}</code></span></div><span className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${matches ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{matches ? t("consistencyMatch") : t("consistencyMismatch")}</span></div></article>; }) : <p className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400">{t("noPathEvents")}</p>}</div>}</section>; }
+export function ReferralPathPanel({
+  events,
+  loading,
+  error,
+  referrerOf,
+}: {
+  events: ReferralPathEvidence[];
+  loading: boolean;
+  error: string;
+  referrerOf?: string;
+}) {
+  const { t } = useLanguage();
+  const { timezone } = useSettings();
+  const [blockFrom, setBlockFrom] = useState("");
+  const [blockTo, setBlockTo] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
+  const filtered = useMemo(
+    () =>
+      events.filter(event => {
+        const fromBlock = blockFrom
+          ? event.blockNumber >= Number(blockFrom)
+          : true;
+        const toBlock = blockTo ? event.blockNumber <= Number(blockTo) : true;
+        const fromDate = dateFrom
+          ? event.timestamp !== null &&
+            event.timestamp >= new Date(`${dateFrom}T00:00:00`).getTime()
+          : true;
+        const toDate = dateTo
+          ? event.timestamp !== null &&
+            event.timestamp <= new Date(`${dateTo}T23:59:59.999`).getTime()
+          : true;
+        return !invalidDates && fromBlock && toBlock && fromDate && toDate;
+      }),
+    [events, blockFrom, blockTo, dateFrom, dateTo, invalidDates]
+  );
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageEvents = filtered.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
+  useEffect(() => {
+    setPage(1);
+  }, [blockFrom, blockTo, dateFrom, dateTo, timezone, events.length]);
+  const latest = filtered[filtered.length - 1];
+  const consistent =
+    !latest ||
+    !referrerOf ||
+    latest.registeredBy.toLowerCase() === referrerOf.toLowerCase();
+  const formatTimestamp = (timestamp: number | null) => {
+    if (!timestamp) return "";
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: timezone === "local" ? undefined : timezone,
+      }).format(new Date(timestamp));
+    } catch {
+      return new Date(timestamp).toLocaleString();
+    }
+  };
+  return (
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] sm:p-5">
+      <div className="flex items-center gap-2">
+        <CalendarDays size={18} className="text-teal-600" />
+        <div>
+          <h2 className="text-lg font-bold">{t("referralPath")}</h2>
+          <p className="text-xs text-slate-500">
+            {t("referralPathDescription")} · {t("timezone")}:{" "}
+            {timezone === "local" ? t("localTimezone") : timezone}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        <input
+          inputMode="numeric"
+          value={blockFrom}
+          onChange={event =>
+            setBlockFrom(event.target.value.replace(/\D/g, ""))
+          }
+          placeholder={t("blockFrom")}
+          className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs sm:w-32"
+        />
+        <input
+          inputMode="numeric"
+          value={blockTo}
+          onChange={event => setBlockTo(event.target.value.replace(/\D/g, ""))}
+          placeholder={t("blockTo")}
+          className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs sm:w-32"
+        />
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={event => setDateFrom(event.target.value)}
+          className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs sm:w-auto"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={event => setDateTo(event.target.value)}
+          className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs sm:w-auto"
+        />
+        <span className="col-span-2 self-center text-xs text-slate-500 sm:col-span-1">
+          {filtered.length}/{events.length} {t("eventRecords")}
+        </span>
+      </div>
+      {invalidDates && (
+        <p className="mt-2 text-xs font-semibold text-rose-700">
+          {t("invalidDateRange")}
+        </p>
+      )}
+      {referrerOf && (
+        <div
+          className={`mt-4 flex items-start gap-2 rounded-xl border p-3 text-xs ${consistent ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}
+        >
+          {consistent ? (
+            <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+          ) : (
+            <XCircle size={15} className="mt-0.5 shrink-0" />
+          )}
+          <span>
+            <strong>{t("consistencyCheck")}:</strong>{" "}
+            {consistent ? t("consistencyMatch") : t("consistencyMismatch")} ·{" "}
+            {t("referrerOfLabel")} {referrerOf}
+          </span>
+        </div>
+      )}
+      {error ? (
+        <p className="mt-4 rounded-xl bg-rose-50 p-3 text-xs text-rose-800">
+          {error}
+        </p>
+      ) : loading ? (
+        <p className="mt-4 text-xs text-slate-500">{t("eventPathLoading")}</p>
+      ) : (
+        <>
+          {pageEvents.length ? (
+            <div className="mt-5 space-y-0">
+              {pageEvents.map((event, index) => {
+                const absoluteIndex = (safePage - 1) * pageSize + index;
+                const matches =
+                  !referrerOf ||
+                  event.registeredBy.toLowerCase() === referrerOf.toLowerCase();
+                return (
+                  <article
+                    key={`${event.hash}-${event.blockNumber}`}
+                    className="relative flex gap-3 pb-5 last:pb-0"
+                  >
+                    <div className="flex w-5 shrink-0 flex-col items-center">
+                      <span
+                        className={`z-10 grid h-5 w-5 place-items-center rounded-full ring-4 ring-white ${matches ? "bg-emerald-500" : "bg-amber-500"}`}
+                      />
+                      {index < pageEvents.length - 1 && (
+                        <span className="w-px flex-1 bg-slate-200" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-bold text-slate-800">
+                          {t("registeredEvent")} #{absoluteIndex + 1}
+                        </p>
+                        <time
+                          className="text-[10px] text-slate-500"
+                          dateTime={
+                            event.timestamp
+                              ? new Date(event.timestamp).toISOString()
+                              : undefined
+                          }
+                        >
+                          {event.timestamp
+                            ? formatTimestamp(event.timestamp)
+                            : `Block ${event.blockNumber}`}
+                        </time>
+                      </div>
+                      <div className="mt-2 grid gap-1 text-[11px] text-slate-600 sm:grid-cols-2">
+                        <span>
+                          <b>{t("ticket")}:</b> #{event.ticketId}
+                        </span>
+                        <span>
+                          <b>{t("block")}:</b>{" "}
+                          {event.blockNumber.toLocaleString()}
+                        </span>
+                        <span className="break-all">
+                          <b>{t("registeredBy")}:</b>{" "}
+                          <code>{event.registeredBy}</code>
+                        </span>
+                        <span className="break-all">
+                          <b>Tx:</b> <code>{event.hash}</code>
+                        </span>
+                      </div>
+                      <span
+                        className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${matches ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                      >
+                        {matches
+                          ? t("consistencyMatch")
+                          : t("consistencyMismatch")}
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-5 rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400">
+              {t("noPathEvents")}
+            </p>
+          )}
+          <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {t("showing")} {pageEvents.length} {t("eventRecords")} ·{" "}
+              {t("page")} {safePage}/{totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(current => Math.max(1, current - 1))}
+                disabled={safePage <= 1}
+                className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 font-semibold disabled:opacity-40"
+              >
+                <ChevronLeft size={14} />
+                {t("previous")}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setPage(current => Math.min(totalPages, current + 1))
+                }
+                disabled={safePage >= totalPages}
+                className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 font-semibold disabled:opacity-40"
+              >
+                {t("next")}
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
