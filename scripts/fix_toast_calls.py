@@ -1,0 +1,22 @@
+from pathlib import Path
+for name in ["client/src/pages/Home.tsx", "client/src/pages/OwnerDashboard.tsx"]:
+    p = Path("/home/ubuntu/onchain-queue-dashboard") / name
+    s = p.read_text()
+    s = s.replace('t("onchainUpdated", { description:', 't("onchainUpdated"), { description:')
+    s = s.replace('t("onchainReadError", { description:', 't("onchainReadError"), { description:')
+    s = s.replace('t("ownerWalletReady", { description:', 't("ownerWalletReady"), { description:')
+    s = s.replace('t("ownerConnectFailed", { description:', 't("ownerConnectFailed"), { description:')
+    s = s.replace('t("registrationPreparing", { description:', 't("registrationPreparing"), { description:')
+    s = s.replace('t("registrationConfirmed", { description:', 't("registrationConfirmed"), { description:')
+    s = s.replace('t("registrationFailed", { description:', 't("registrationFailed"), { description:')
+    s = s.replace('t("verifyFailed", { description:', 't("verifyFailed"), { description:')
+    s = s.replace('t("disablePreparing", { description:', 't("disablePreparing"), { description:')
+    s = s.replace('t("disableConfirmed", { description:', 't("disableConfirmed"), { description:')
+    s = s.replace('t("disableFailed", { description:', 't("disableFailed"), { description:')
+    s = s.replace('t("signingIn", { description:', 't("signingIn"), { description:')
+    s = s.replace('t("signInSuccess", { description:', 't("signInSuccess"), { description:')
+    s = s.replace('t("signInFailed", { description:', 't("signInFailed"), { description:')
+    s = s.replace('t("walletNotFound", { description:', 't("walletNotFound"), { description:')
+    s = s.replace('t("walletConnected", { description:', 't("walletConnected"), { description:')
+    s = s.replace('t("walletConnectFailed", { description:', 't("walletConnectFailed"), { description:')
+    p.write_text(s)
