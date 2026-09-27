@@ -5,11 +5,12 @@ import {
   ChevronRight,
   Download,
   GitBranch,
+  Loader2,
   ShieldCheck,
   UserRound,
   XCircle,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSettings } from "@/contexts/SettingsContext";
 
@@ -303,6 +304,8 @@ export function ReferralPathPanel({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
+  const [pageTransitioning, setPageTransitioning] = useState(false);
+  const pageTransitionTimer = useRef<number | null>(null);
   const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
   const filtered = useMemo(
     () =>
@@ -333,6 +336,26 @@ export function ReferralPathPanel({
   useEffect(() => {
     setPage(1);
   }, [blockFrom, blockTo, dateFrom, dateTo, timezone, events.length]);
+  useEffect(
+    () => () => {
+      if (pageTransitionTimer.current !== null) {
+        window.clearTimeout(pageTransitionTimer.current);
+      }
+    },
+    []
+  );
+  const changePage = (nextPage: number) => {
+    if (nextPage === safePage || pageTransitioning) return;
+    if (pageTransitionTimer.current !== null) {
+      window.clearTimeout(pageTransitionTimer.current);
+    }
+    setPageTransitioning(true);
+    setPage(nextPage);
+    pageTransitionTimer.current = window.setTimeout(() => {
+      setPageTransitioning(false);
+      pageTransitionTimer.current = null;
+    }, 240);
+  };
   const latest = filtered[filtered.length - 1];
   const consistent =
     !latest ||
@@ -425,7 +448,25 @@ export function ReferralPathPanel({
       ) : (
         <>
           {pageEvents.length ? (
-            <div className="mt-5 space-y-0">
+            <div
+              aria-busy={pageTransitioning}
+              className={`relative mt-5 min-h-32 space-y-0 transition duration-200 motion-reduce:transition-none ${pageTransitioning ? "translate-y-0.5 opacity-60" : "translate-y-0 opacity-100"}`}
+            >
+              {pageTransitioning && (
+                <div
+                  className="absolute inset-0 z-20 flex items-start justify-center rounded-xl bg-white/65 pt-8 backdrop-blur-[1px]"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-white px-3 py-2 text-xs font-semibold text-teal-700 shadow-sm">
+                    <Loader2
+                      size={14}
+                      className="animate-spin motion-reduce:animate-none"
+                    />
+                    {t("eventPathLoading")}
+                  </span>
+                </div>
+              )}
               {pageEvents.map((event, index) => {
                 const absoluteIndex = (safePage - 1) * pageSize + index;
                 const matches =
@@ -503,8 +544,8 @@ export function ReferralPathPanel({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setPage(current => Math.max(1, current - 1))}
-                disabled={safePage <= 1}
+                onClick={() => changePage(Math.max(1, safePage - 1))}
+                disabled={safePage <= 1 || pageTransitioning}
                 className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 font-semibold disabled:opacity-40"
               >
                 <ChevronLeft size={14} />
@@ -512,10 +553,8 @@ export function ReferralPathPanel({
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  setPage(current => Math.min(totalPages, current + 1))
-                }
-                disabled={safePage >= totalPages}
+                onClick={() => changePage(Math.min(totalPages, safePage + 1))}
+                disabled={safePage >= totalPages || pageTransitioning}
                 className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-2.5 font-semibold disabled:opacity-40"
               >
                 {t("next")}
