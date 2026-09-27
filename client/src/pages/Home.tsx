@@ -159,6 +159,38 @@ function MetricCard({
   );
 }
 
+function BlockchainMetricSkeleton() {
+  return (
+    <section
+      className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]"
+      aria-hidden="true"
+    >
+      <div className="flex animate-pulse items-start justify-between gap-4 motion-reduce:animate-none">
+        <div className="min-w-0 flex-1">
+          <div className="h-3 w-24 rounded bg-slate-200" />
+          <div className="mt-4 h-8 w-32 rounded bg-slate-200" />
+          <div className="mt-2 h-2.5 w-20 rounded bg-slate-100" />
+        </div>
+        <div className="h-11 w-11 shrink-0 rounded-2xl bg-slate-100 ring-8 ring-slate-50" />
+      </div>
+    </section>
+  );
+}
+
+function BlockchainQueueRowSkeleton() {
+  return (
+    <tr className="animate-pulse motion-reduce:animate-none" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, index) => (
+        <td key={index} className="px-5 py-4">
+          <span
+            className={`block h-3 rounded bg-slate-200 ${index === 5 ? "ml-auto w-20" : index === 1 ? "w-28" : "w-16"}`}
+          />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { className: string; icon: any }> = {
     Claimed: {
@@ -1330,7 +1362,7 @@ export default function Home() {
 
         <main className="min-w-0 flex-1">
           <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-[#f6f9fb]/90 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-10">
-            <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4">
+            <div className="mx-auto flex max-w-[1440px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="flex items-center gap-3">
                 <button
                   className="grid h-10 w-10 place-items-center rounded-xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 lg:hidden"
@@ -1348,7 +1380,7 @@ export default function Home() {
                   </h1>
                 </div>
               </div>
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-3">
                 <LanguageSwitcher />
                 <SettingsPanel />
                 <span
@@ -1408,7 +1440,7 @@ export default function Home() {
                     setSignInStatus("idle");
                     setSignInError("");
                   }}
-                  className="gap-2 rounded-xl bg-slate-950 px-4 text-white shadow-lg shadow-slate-950/10 hover:bg-slate-800"
+                  className="ml-auto min-h-11 shrink-0 gap-2 rounded-xl bg-slate-950 px-4 text-white shadow-lg shadow-slate-950/10 hover:bg-slate-800 sm:ml-0"
                 >
                   <Wallet size={16} />
                   {account ? shortAddress(account) : "Connect wallet"}
@@ -1482,37 +1514,48 @@ export default function Home() {
               </section>
             )}
 
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricCard
-                icon={Ticket}
-                label={t("ticketTotal")}
-                value={metrics.tickets}
-                detail={
-                  snapshot
-                    ? `Block ${snapshot.blockNumber.toLocaleString()}`
-                    : "Preview"
-                }
-              />
-              <MetricCard
-                icon={Gauge}
-                label={t("waitingAllocation")}
-                value={metrics.waiting}
-                detail="Ticket ID order"
-                tone="amber"
-              />
-              <MetricCard
-                icon={Database}
-                label={t("contractBalance")}
-                value={metrics.balance}
-                detail="Read from token state"
-                tone="blue"
-              />
-              <MetricCard
-                icon={CheckCircle2}
-                label={t("claimedTotal")}
-                value={metrics.claimed}
-                detail="Read from on-chain state"
-              />
+            <section
+              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+              aria-busy={loading && !snapshot}
+            >
+              {loading && !snapshot ? (
+                Array.from({ length: 4 }, (_, index) => (
+                  <BlockchainMetricSkeleton key={`metric-skeleton-${index}`} />
+                ))
+              ) : (
+                <>
+                  <MetricCard
+                    icon={Ticket}
+                    label={t("ticketTotal")}
+                    value={metrics.tickets}
+                    detail={
+                      snapshot
+                        ? `Block ${snapshot.blockNumber.toLocaleString()}`
+                        : "Preview"
+                    }
+                  />
+                  <MetricCard
+                    icon={Gauge}
+                    label={t("waitingAllocation")}
+                    value={metrics.waiting}
+                    detail="Ticket ID order"
+                    tone="amber"
+                  />
+                  <MetricCard
+                    icon={Database}
+                    label={t("contractBalance")}
+                    value={metrics.balance}
+                    detail="Read from token state"
+                    tone="blue"
+                  />
+                  <MetricCard
+                    icon={CheckCircle2}
+                    label={t("claimedTotal")}
+                    value={metrics.claimed}
+                    detail="Read from on-chain state"
+                  />
+                </>
+              )}
             </section>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -1552,65 +1595,76 @@ export default function Home() {
                         <th className="px-5 py-3 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {rows.map(row => (
-                        <tr
-                          key={row.id}
-                          className={`group transition hover:bg-teal-50/30 ${highlightedTicketIds.includes(row.id) ? "animate-pulse bg-amber-50 ring-1 ring-inset ring-amber-200" : ""}`}
-                        >
-                          <td className="px-5 py-4 font-bold text-slate-900">
-                            #{row.id}
-                          </td>
-                          <td className="px-5 py-4 font-mono text-xs text-slate-500">
-                            {row.recipient}
-                          </td>
-                          <td className="px-5 py-4">
-                            <StatusBadge status={row.status} />
-                          </td>
-                          <td className="px-5 py-4 font-semibold text-slate-700">
-                            {row.amount}
-                            {snapshot && row.amount !== "—"
-                              ? ` ${snapshot.symbol}`
-                              : ""}
-                          </td>
-                          <td className="px-5 py-4 text-xs text-slate-400">
-                            {row.block}
-                          </td>
-                          <td className="px-5 py-4 text-right">
-                            {row.status === "Claimed" ? (
-                              <button
-                                onClick={() => {
-                                  if (
-                                    "address" in row &&
-                                    Web3.utils.isAddress((row as any).address)
-                                  )
-                                    explorerAddress((row as any).address);
-                                  else
-                                    toast.info("ตัวอย่างหน้าจอ", {
-                                      description:
-                                        "กรอก Contract Address เพื่อเปิดข้อมูลจริงบน Explorer",
-                                    });
-                                }}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-teal-300 hover:text-teal-700"
-                              >
-                                View on Explorer <ExternalLink size={13} />
-                              </button>
-                            ) : (
-                              <button
-                                disabled={
-                                  !snapshot ||
-                                  row.status !== "Allocated" ||
-                                  referralStatus?.paused
-                                }
-                                onClick={() => openClaim(row as any)}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 px-3 py-2 text-xs font-semibold text-teal-700 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-40"
-                              >
-                                Claim <ArrowUpRight size={13} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                    <tbody
+                      className="divide-y divide-slate-100"
+                      aria-busy={loading && !snapshot}
+                    >
+                      {loading && !snapshot
+                        ? Array.from({ length: 5 }, (_, index) => (
+                            <BlockchainQueueRowSkeleton
+                              key={`queue-skeleton-${index}`}
+                            />
+                          ))
+                        : rows.map(row => (
+                            <tr
+                              key={row.id}
+                              className={`group transition hover:bg-teal-50/30 ${highlightedTicketIds.includes(row.id) ? "animate-pulse bg-amber-50 ring-1 ring-inset ring-amber-200" : ""}`}
+                            >
+                              <td className="px-5 py-4 font-bold text-slate-900">
+                                #{row.id}
+                              </td>
+                              <td className="px-5 py-4 font-mono text-xs text-slate-500">
+                                {row.recipient}
+                              </td>
+                              <td className="px-5 py-4">
+                                <StatusBadge status={row.status} />
+                              </td>
+                              <td className="px-5 py-4 font-semibold text-slate-700">
+                                {row.amount}
+                                {snapshot && row.amount !== "—"
+                                  ? ` ${snapshot.symbol}`
+                                  : ""}
+                              </td>
+                              <td className="px-5 py-4 text-xs text-slate-400">
+                                {row.block}
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                {row.status === "Claimed" ? (
+                                  <button
+                                    onClick={() => {
+                                      if (
+                                        "address" in row &&
+                                        Web3.utils.isAddress(
+                                          (row as any).address
+                                        )
+                                      )
+                                        explorerAddress((row as any).address);
+                                      else
+                                        toast.info("ตัวอย่างหน้าจอ", {
+                                          description:
+                                            "กรอก Contract Address เพื่อเปิดข้อมูลจริงบน Explorer",
+                                        });
+                                    }}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-teal-300 hover:text-teal-700"
+                                  >
+                                    View on Explorer <ExternalLink size={13} />
+                                  </button>
+                                ) : (
+                                  <button
+                                    disabled={
+                                      !snapshot ||
+                                      row.status !== "Allocated" ||
+                                      referralStatus?.paused
+                                    }
+                                    onClick={() => openClaim(row as any)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 px-3 py-2 text-xs font-semibold text-teal-700 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    Claim <ArrowUpRight size={13} />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
                     </tbody>
                   </table>
                 </div>
