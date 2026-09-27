@@ -1498,7 +1498,18 @@ export default function Home() {
                 {error && (
                   <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
                     <AlertTriangle className="mt-0.5 shrink-0" size={16} />
-                    <span>{error}</span>
+                    <div className="min-w-0 flex-1">
+                      <p>{error}</p>
+                      <Button
+                        type="button"
+                        onClick={() => void loadOnchain()}
+                        disabled={loading}
+                        variant="outline"
+                        className="mt-3 h-9 gap-2 rounded-lg border-rose-200/40 bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20"
+                      >
+                        <RefreshCw size={13} /> {t("retry")}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1557,6 +1568,16 @@ export default function Home() {
                 </>
               )}
             </section>
+            {loading && !snapshot && (
+              <p
+                className="-mt-3 flex items-center gap-2 px-1 text-xs font-semibold text-teal-700"
+                role="status"
+                aria-live="polite"
+              >
+                <span className="h-2 w-2 animate-pulse rounded-full bg-teal-500 motion-reduce:animate-none" />
+                กำลังอ่านข้อมูลจาก BNB Smart Chain…
+              </p>
+            )}
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
               <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
@@ -1600,11 +1621,14 @@ export default function Home() {
                       aria-busy={loading && !snapshot}
                     >
                       {loading && !snapshot
-                        ? Array.from({ length: 5 }, (_, index) => (
-                            <BlockchainQueueRowSkeleton
-                              key={`queue-skeleton-${index}`}
-                            />
-                          ))
+                        ? Array.from(
+                            { length: Math.max(5, Math.min(12, rows.length)) },
+                            (_, index) => (
+                              <BlockchainQueueRowSkeleton
+                                key={`queue-skeleton-${index}`}
+                              />
+                            )
+                          )
                         : rows.map(row => (
                             <tr
                               key={row.id}
@@ -2476,9 +2500,18 @@ export default function Home() {
                 </div>
               )}
               {signInError && (
-                <p className="rounded-xl bg-rose-50 p-3 text-xs leading-5 text-rose-800">
-                  {signInError}
-                </p>
+                <div className="rounded-xl bg-rose-50 p-3 text-xs leading-5 text-rose-800">
+                  <p>{signInError}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={signInWithWallet}
+                    disabled={signInStatus === "signing"}
+                    className="mt-3 h-8 gap-2 rounded-lg border-rose-200 px-3 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                  >
+                    <Wallet size={13} /> {t("retry")}
+                  </Button>
+                </div>
               )}
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button
@@ -2512,7 +2545,11 @@ export default function Home() {
                     ) : (
                       <Wallet size={16} />
                     )}
-                    {signInStatus === "signing" ? "Signing…" : "Connect wallet"}
+                    {signInStatus === "signing"
+                      ? "Signing…"
+                      : signInStatus === "error"
+                        ? t("retry")
+                        : "Connect wallet"}
                   </Button>
                 )}
               </div>
