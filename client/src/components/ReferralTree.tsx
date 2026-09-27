@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Download,
   GitBranch,
-  Loader2,
   ShieldCheck,
   UserRound,
   XCircle,
@@ -113,6 +112,48 @@ function exportBranchCsv(branches: Array<{ label: string; count: number }>) {
   download(
     `branch-statistics-${new Date().toISOString().slice(0, 10)}.csv`,
     new Blob([body], { type: "text/csv;charset=utf-8" })
+  );
+}
+
+function readTimelineStateFromUrl() {
+  if (typeof window === "undefined") {
+    return { page: 1, blockFrom: "", blockTo: "", dateFrom: "", dateTo: "" };
+  }
+  const params = new URLSearchParams(window.location.search);
+  const page = Number(params.get("timelinePage"));
+  return {
+    page: Number.isInteger(page) && page > 0 ? page : 1,
+    blockFrom: params.get("blockFrom") || "",
+    blockTo: params.get("blockTo") || "",
+    dateFrom: params.get("dateFrom") || "",
+    dateTo: params.get("dateTo") || "",
+  };
+}
+
+function EventCardSkeleton() {
+  return (
+    <div
+      className="relative flex animate-pulse gap-3 motion-reduce:animate-none"
+      aria-hidden="true"
+    >
+      <div className="flex w-5 shrink-0 flex-col items-center">
+        <span className="h-5 w-5 rounded-full bg-slate-200 ring-4 ring-white" />
+        <span className="w-px flex-1 bg-slate-200" />
+      </div>
+      <div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="h-3 w-32 rounded bg-slate-200" />
+          <span className="h-3 w-28 rounded bg-slate-200" />
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <span className="h-2.5 w-24 rounded bg-slate-200" />
+          <span className="h-2.5 w-20 rounded bg-slate-200" />
+          <span className="h-2.5 w-44 max-w-full rounded bg-slate-200" />
+          <span className="h-2.5 w-52 max-w-full rounded bg-slate-200" />
+        </div>
+        <span className="mt-3 inline-block h-5 w-28 rounded-full bg-slate-200" />
+      </div>
+    </div>
   );
 }
 
@@ -299,13 +340,19 @@ export function ReferralPathPanel({
 }) {
   const { t } = useLanguage();
   const { timezone } = useSettings();
-  const [blockFrom, setBlockFrom] = useState("");
-  const [blockTo, setBlockTo] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [page, setPage] = useState(1);
+  const initialTimelineState = useRef(readTimelineStateFromUrl());
+  const [blockFrom, setBlockFrom] = useState(
+    initialTimelineState.current.blockFrom
+  );
+  const [blockTo, setBlockTo] = useState(initialTimelineState.current.blockTo);
+  const [dateFrom, setDateFrom] = useState(
+    initialTimelineState.current.dateFrom
+  );
+  const [dateTo, setDateTo] = useState(initialTimelineState.current.dateTo);
+  const [page, setPage] = useState(initialTimelineState.current.page);
   const [pageTransitioning, setPageTransitioning] = useState(false);
   const pageTransitionTimer = useRef<number | null>(null);
+  const skipInitialFilterReset = useRef(true);
   const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
   const filtered = useMemo(
     () =>
@@ -334,8 +381,33 @@ export function ReferralPathPanel({
     safePage * pageSize
   );
   useEffect(() => {
+    if (skipInitialFilterReset.current) {
+      skipInitialFilterReset.current = false;
+      return;
+    }
     setPage(1);
-  }, [blockFrom, blockTo, dateFrom, dateTo, timezone, events.length]);
+  }, [blockFrom, blockTo, dateFrom, dateTo]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const values = {
+      timelinePage: String(safePage),
+      blockFrom,
+      blockTo,
+      dateFrom,
+      dateTo,
+    };
+    Object.entries(values).forEach(([key, value]) => {
+      if (value && (key !== "timelinePage" || value !== "1"))
+        params.set(key, value);
+      else params.delete(key);
+    });
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`
+    );
+  }, [safePage, blockFrom, blockTo, dateFrom, dateTo]);
   useEffect(
     () => () => {
       if (pageTransitionTimer.current !== null) {
@@ -454,17 +526,24 @@ export function ReferralPathPanel({
             >
               {pageTransitioning && (
                 <div
-                  className="absolute inset-0 z-20 flex items-start justify-center rounded-xl bg-white/65 pt-8 backdrop-blur-[1px]"
+                  className="absolute inset-0 z-20 rounded-xl bg-white/80 backdrop-blur-[1px]"
                   role="status"
                   aria-live="polite"
                 >
-                  <span className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-white px-3 py-2 text-xs font-semibold text-teal-700 shadow-sm">
-                    <Loader2
-                      size={14}
-                      className="animate-spin motion-reduce:animate-none"
-                    />
-                    {t("eventPathLoading")}
-                  </span>
+                  <span className="sr-only">{t("eventPathLoading")}</span>
+                  <div className="space-y-0">
+                    {Array.from(
+                      {
+                        length: Math.min(
+                          pageSize,
+                          Math.max(pageEvents.length, 3)
+                        ),
+                      },
+                      (_, index) => (
+                        <EventCardSkeleton key={`event-skeleton-${index}`} />
+                      )
+                    )}
+                  </div>
                 </div>
               )}
               {pageEvents.map((event, index) => {
