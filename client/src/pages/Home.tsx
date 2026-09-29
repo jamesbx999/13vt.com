@@ -407,6 +407,7 @@ export default function Home() {
   const [chainId, setChainId] = useState<number | null>(null);
   const [snapshot, setSnapshot] = useState<QueueSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
+  const [readSuccessPulse, setReadSuccessPulse] = useState(false);
   const [error, setError] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [claimTicket, setClaimTicket] = useState<{
@@ -853,6 +854,8 @@ export default function Home() {
           );
         }
         setSnapshot(next);
+        setReadSuccessPulse(true);
+        window.setTimeout(() => setReadSuccessPulse(false), 1400);
         setHistoryLoading(true);
         setHistoryError("");
         try {
@@ -899,6 +902,7 @@ export default function Home() {
           });
       } catch (readError: any) {
         setSnapshot(null);
+        setReadSuccessPulse(false);
         setError(readError?.message || "อ่านข้อมูลจาก Contract ไม่สำเร็จ");
         if (notify)
           toast.error(t("onchainReadError"), {
@@ -1435,7 +1439,17 @@ export default function Home() {
                   </Button>
                 )}
                 <div
-                  className={`wallet-button-shell ml-auto sm:ml-0 ${signInStatus === "signing" ? "is-connecting" : account ? "is-connected" : signInStatus === "error" ? "is-error" : ""}`}
+                  className={`action-tooltip wallet-button-shell ml-auto sm:ml-0 ${signInStatus === "signing" ? "is-connecting" : account ? "is-connected" : signInStatus === "error" ? "is-error" : ""}`}
+                  data-tooltip={
+                    signInStatus === "signing"
+                      ? "กำลังเชื่อมต่อและรอการยืนยันจาก Wallet"
+                      : account
+                        ? "เชื่อมต่อ Wallet แล้ว"
+                        : signInStatus === "error"
+                          ? "การเชื่อมต่อไม่สำเร็จ — คลิกเพื่อเชื่อมต่อใหม่"
+                          : "ยังไม่ได้เชื่อมต่อ Wallet — คลิกเพื่อเริ่มต้น"
+                  }
+                  tabIndex={0}
                   data-connection-state={
                     signInStatus === "signing"
                       ? "connecting"
@@ -1516,7 +1530,17 @@ export default function Home() {
                     />
                   </div>
                   <div
-                    className={`gradient-action-shell wallet-button-shell ${loading ? "is-reading" : error ? "is-error" : ""}`}
+                    className={`action-tooltip gradient-action-shell wallet-button-shell ${loading ? "is-reading" : error ? "is-error" : readSuccessPulse ? "is-success" : ""}`}
+                    data-tooltip={
+                      loading
+                        ? "กำลังอ่านข้อมูลจาก BNB Smart Chain"
+                        : error
+                          ? "อ่านข้อมูลไม่สำเร็จ — คลิก Retry เพื่ออ่านใหม่"
+                          : readSuccessPulse
+                            ? "อ่านข้อมูลจาก Blockchain สำเร็จ"
+                            : "คลิกเพื่ออ่านข้อมูลล่าสุดจาก Smart Contract"
+                    }
+                    tabIndex={0}
                     data-read-state={
                       loading ? "reading" : error ? "error" : "ready"
                     }
