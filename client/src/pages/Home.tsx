@@ -1434,17 +1434,33 @@ export default function Home() {
                     <ShieldCheck size={15} /> Owner
                   </Button>
                 )}
-                <Button
-                  onClick={() => {
-                    setSignInOpen(true);
-                    setSignInStatus("idle");
-                    setSignInError("");
-                  }}
-                  className="ml-auto min-h-11 shrink-0 gap-2 rounded-xl bg-slate-950 px-4 text-white shadow-lg shadow-slate-950/10 hover:bg-slate-800 sm:ml-0"
-                >
-                  <Wallet size={16} />
-                  {account ? shortAddress(account) : "Connect wallet"}
-                </Button>
+                <div className="wallet-button-shell ml-auto sm:ml-0">
+                  <span className="light" aria-hidden="true" />
+                  {[25, 15.9, 26.4, 17.8, 19.2, 29.2, 20.2].map(
+                    (duration, index) => (
+                      <span
+                        key={`wallet-gradient-${index}`}
+                        className="gradient-layer"
+                        style={{
+                          animationDelay: `${[0, 0.15, 0.53, 0.45, 1.6, 1.6, 1.6][index]}s`,
+                          animationDuration: `${duration}s`,
+                        }}
+                        aria-hidden="true"
+                      />
+                    )
+                  )}
+                  <Button
+                    onClick={() => {
+                      setSignInOpen(true);
+                      setSignInStatus("idle");
+                      setSignInError("");
+                    }}
+                    className="wallet-gradient-button gap-2 px-4 text-white hover:bg-slate-800"
+                  >
+                    <Wallet size={16} />
+                    {account ? shortAddress(account) : "Connect wallet"}
+                  </Button>
+                </div>
               </div>
             </div>
           </header>

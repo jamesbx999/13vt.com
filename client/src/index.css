@@ -222,6 +222,65 @@
     box-shadow: 0 0 12px var(--logo-one);
   }
 
+  .wallet-button-shell {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    min-height: 2.75rem;
+    min-width: max-content;
+    overflow: hidden;
+    border-radius: 0.8rem;
+    padding: 1px;
+    background: #0f172a;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  }
+
+  .wallet-button-shell .light {
+    position: absolute;
+    inset: -80%;
+    z-index: -1;
+    background: conic-gradient(
+      from 90deg,
+      transparent 0 20%,
+      #5eead4,
+      #818cf8,
+      transparent 55% 100%
+    );
+    filter: blur(12px);
+    opacity: 0.9;
+    animation: wallet-button-spin 6s linear infinite;
+  }
+
+  .wallet-button-shell .gradient-layer {
+    position: absolute;
+    inset: -130%;
+    z-index: -1;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 180deg,
+      transparent 0 35%,
+      #2dd4bf 42%,
+      #6366f1 51%,
+      transparent 62% 100%
+    );
+    opacity: 0.85;
+    animation: wallet-button-spin linear infinite;
+  }
+
+  .wallet-gradient-button {
+    position: relative;
+    z-index: 1;
+    min-height: 2.6rem;
+    border-radius: 0.72rem;
+    background: #020617 !important;
+  }
+
+  @keyframes wallet-button-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   @keyframes brand-logo-orbit {
     0%,
     100% {
@@ -237,6 +296,11 @@
   @media (prefers-reduced-motion: reduce) {
     .brand-logo-loader::before,
     .brand-logo-loader::after {
+      animation: none;
+    }
+
+    .wallet-button-shell .light,
+    .wallet-button-shell .gradient-layer {
       animation: none;
     }
   }
