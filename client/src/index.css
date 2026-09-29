@@ -340,6 +340,17 @@
     animation: read-success-pulse 900ms ease-out;
   }
 
+  :root[data-button-animations="off"] .wallet-button-shell .light,
+  :root[data-button-animations="off"] .wallet-button-shell .gradient-layer,
+  :root[data-button-animations="off"] .gradient-action-shell .light,
+  :root[data-button-animations="off"] .gradient-action-shell .gradient-layer {
+    display: none;
+  }
+
+  :root[data-button-animations="off"] .gradient-action-shell.is-success {
+    animation: none;
+  }
+
   @keyframes read-success-pulse {
     0% {
       box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.65);

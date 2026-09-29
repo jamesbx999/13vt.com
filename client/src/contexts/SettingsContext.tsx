@@ -41,6 +41,8 @@ type SettingsContextValue = {
   setTimezone: (timezone: TimezonePreference) => void;
   autoRefreshPaused: boolean;
   setAutoRefreshPaused: (paused: boolean) => void;
+  buttonAnimations: boolean;
+  setButtonAnimations: (enabled: boolean) => void;
   resetSettings: () => void;
   isPageVisible: boolean;
 };
@@ -55,6 +57,8 @@ const SettingsContext = createContext<SettingsContextValue>({
   setTimezone: () => undefined,
   autoRefreshPaused: false,
   setAutoRefreshPaused: () => undefined,
+  buttonAnimations: true,
+  setButtonAnimations: () => undefined,
   resetSettings: () => undefined,
   isPageVisible: true,
 });
@@ -66,6 +70,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     browserTimezone()
   );
   const [autoRefreshPaused, setAutoRefreshPaused] = useState(false);
+  const [buttonAnimations, setButtonAnimations] = useState(true);
   const [isPageVisible, setIsPageVisible] = useState(
     () =>
       typeof document === "undefined" || document.visibilityState === "visible"
@@ -82,6 +87,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setTimezone(saved.timezone);
       if (typeof saved.autoRefreshPaused === "boolean")
         setAutoRefreshPaused(saved.autoRefreshPaused);
+      if (typeof saved.buttonAnimations === "boolean")
+        setButtonAnimations(saved.buttonAnimations);
     } catch {
       /* use defaults */
     }
@@ -95,9 +102,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         refreshInterval,
         timezone,
         autoRefreshPaused,
+        buttonAnimations,
       })
     );
-  }, [toastEnabled, refreshInterval, timezone, autoRefreshPaused]);
+  }, [
+    toastEnabled,
+    refreshInterval,
+    timezone,
+    autoRefreshPaused,
+    buttonAnimations,
+  ]);
+
+  useEffect(() => {
+    document.documentElement.dataset.buttonAnimations = buttonAnimations
+      ? "on"
+      : "off";
+  }, [buttonAnimations]);
 
   useEffect(() => {
     const onVisibilityChange = () =>
@@ -112,6 +132,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setRefreshInterval(30);
     setTimezone(browserTimezone());
     setAutoRefreshPaused(false);
+    setButtonAnimations(true);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -125,10 +146,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setTimezone,
       autoRefreshPaused,
       setAutoRefreshPaused,
+      buttonAnimations,
+      setButtonAnimations,
       resetSettings,
       isPageVisible,
     }),
-    [toastEnabled, refreshInterval, timezone, autoRefreshPaused, isPageVisible]
+    [
+      toastEnabled,
+      refreshInterval,
+      timezone,
+      autoRefreshPaused,
+      buttonAnimations,
+      isPageVisible,
+    ]
   );
   return (
     <SettingsContext.Provider value={value}>
@@ -166,6 +196,8 @@ export function SettingsPanel() {
     setTimezone,
     autoRefreshPaused,
     setAutoRefreshPaused,
+    buttonAnimations,
+    setButtonAnimations,
     resetSettings,
   } = useSettings();
   const { t } = useLanguage();
@@ -209,6 +241,18 @@ export function SettingsPanel() {
             ))}
           </select>
         </label>
+        <label className="mt-4 flex items-center justify-between gap-3 text-slate-600">
+          <span>{t("buttonAnimations")}</span>
+          <input
+            type="checkbox"
+            checked={buttonAnimations}
+            onChange={event => setButtonAnimations(event.target.checked)}
+            className="h-4 w-4 accent-teal-600"
+          />
+        </label>
+        <p className="mt-1 text-[11px] leading-4 text-slate-400">
+          {t("buttonAnimationsDescription")}
+        </p>
         <label className="mt-4 block text-slate-600">
           <span>{t("timezone")}</span>
           <select

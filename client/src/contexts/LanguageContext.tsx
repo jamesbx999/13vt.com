@@ -36,6 +36,9 @@ const common = {
   settings: "Settings",
   dashboardSettings: "Dashboard settings",
   toastNotifications: "Toast notifications",
+  buttonAnimations: "Button animations",
+  buttonAnimationsDescription:
+    "Show animated gradients on primary action buttons.",
   autoRefreshInterval: "Auto-refresh interval",
   savedOnDevice: "Changes are saved on this device.",
   seconds: "seconds",
