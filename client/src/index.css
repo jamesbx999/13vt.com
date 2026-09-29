@@ -223,6 +223,8 @@
   }
 
   .wallet-button-shell {
+    --action-accent: #5eead4;
+    --action-accent-alt: #818cf8;
     position: relative;
     isolation: isolate;
     display: inline-flex;
@@ -235,15 +237,16 @@
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
   }
 
-  .wallet-button-shell .light {
+  .wallet-button-shell .light,
+  .gradient-action-shell .light {
     position: absolute;
     inset: -80%;
     z-index: -1;
     background: conic-gradient(
       from 90deg,
       transparent 0 20%,
-      #5eead4,
-      #818cf8,
+      var(--action-accent),
+      var(--action-accent-alt),
       transparent 55% 100%
     );
     filter: blur(12px);
@@ -251,7 +254,8 @@
     animation: wallet-button-spin 6s linear infinite;
   }
 
-  .wallet-button-shell .gradient-layer {
+  .wallet-button-shell .gradient-layer,
+  .gradient-action-shell .gradient-layer {
     position: absolute;
     inset: -130%;
     z-index: -1;
@@ -259,8 +263,8 @@
     background: conic-gradient(
       from 180deg,
       transparent 0 35%,
-      #2dd4bf 42%,
-      #6366f1 51%,
+      var(--action-accent) 42%,
+      var(--action-accent-alt) 51%,
       transparent 62% 100%
     );
     opacity: 0.85;
@@ -273,6 +277,31 @@
     min-height: 2.6rem;
     border-radius: 0.72rem;
     background: #020617 !important;
+  }
+
+  .wallet-button-shell.is-connecting,
+  .gradient-action-shell.is-reading {
+    --action-accent: #fbbf24;
+    --action-accent-alt: #f97316;
+  }
+
+  .wallet-button-shell.is-connected {
+    --action-accent: #34d399;
+    --action-accent-alt: #14b8a6;
+  }
+
+  .wallet-button-shell.is-error,
+  .gradient-action-shell.is-error {
+    --action-accent: #fb7185;
+    --action-accent-alt: #e11d48;
+  }
+
+  .gradient-action-shell {
+    display: inline-flex;
+  }
+
+  .gradient-action-shell .wallet-gradient-button {
+    background: #042f3a !important;
   }
 
   @keyframes wallet-button-spin {
@@ -300,7 +329,9 @@
     }
 
     .wallet-button-shell .light,
-    .wallet-button-shell .gradient-layer {
+    .wallet-button-shell .gradient-layer,
+    .gradient-action-shell .light,
+    .gradient-action-shell .gradient-layer {
       animation: none;
     }
   }

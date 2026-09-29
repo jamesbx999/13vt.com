@@ -1434,7 +1434,18 @@ export default function Home() {
                     <ShieldCheck size={15} /> Owner
                   </Button>
                 )}
-                <div className="wallet-button-shell ml-auto sm:ml-0">
+                <div
+                  className={`wallet-button-shell ml-auto sm:ml-0 ${signInStatus === "signing" ? "is-connecting" : account ? "is-connected" : signInStatus === "error" ? "is-error" : ""}`}
+                  data-connection-state={
+                    signInStatus === "signing"
+                      ? "connecting"
+                      : account
+                        ? "connected"
+                        : signInStatus === "error"
+                          ? "error"
+                          : "idle"
+                  }
+                >
                   <span className="light" aria-hidden="true" />
                   {[25, 15.9, 26.4, 17.8, 19.2, 29.2, 20.2].map(
                     (duration, index) => (
@@ -1458,7 +1469,13 @@ export default function Home() {
                     className="wallet-gradient-button gap-2 px-4 text-white hover:bg-slate-800"
                   >
                     <Wallet size={16} />
-                    {account ? shortAddress(account) : "Connect wallet"}
+                    {signInStatus === "signing"
+                      ? "Connecting…"
+                      : account
+                        ? shortAddress(account)
+                        : signInStatus === "error"
+                          ? "Retry connection"
+                          : "Connect wallet"}
                   </Button>
                 </div>
               </div>
@@ -1498,18 +1515,43 @@ export default function Home() {
                       aria-label="Contract Address"
                     />
                   </div>
-                  <Button
-                    onClick={() => void loadOnchain()}
-                    disabled={loading}
-                    className="gap-2 rounded-xl bg-teal-300 px-5 font-bold text-slate-950 hover:bg-teal-200"
+                  <div
+                    className={`gradient-action-shell wallet-button-shell ${loading ? "is-reading" : error ? "is-error" : ""}`}
+                    data-read-state={
+                      loading ? "reading" : error ? "error" : "ready"
+                    }
                   >
-                    {loading ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : (
-                      <RefreshCw size={16} />
-                    )}{" "}
-                    {loading ? "Reading data" : "Read on-chain data"}
-                  </Button>
+                    <span className="light" aria-hidden="true" />
+                    {[25, 15.9, 26.4, 17.8, 19.2, 29.2, 20.2].map(
+                      (duration, index) => (
+                        <span
+                          key={`read-gradient-${index}`}
+                          className="gradient-layer"
+                          style={{
+                            animationDelay: `${[0, 0.15, 0.53, 0.45, 1.6, 1.6, 1.6][index]}s`,
+                            animationDuration: `${duration}s`,
+                          }}
+                          aria-hidden="true"
+                        />
+                      )
+                    )}
+                    <Button
+                      onClick={() => void loadOnchain()}
+                      disabled={loading}
+                      className="wallet-gradient-button gap-2 px-5 font-bold text-white hover:bg-slate-800"
+                    >
+                      {loading ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <RefreshCw size={16} />
+                      )}{" "}
+                      {loading
+                        ? "Reading data"
+                        : error
+                          ? "Retry on-chain read"
+                          : "Read on-chain data"}
+                    </Button>
+                  </div>
                 </div>
                 {error && (
                   <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
