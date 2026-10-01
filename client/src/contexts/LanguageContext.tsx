@@ -108,6 +108,8 @@ const common = {
   checkContractAndAbi: "Check the Contract address, ABI, and network.",
   walletNotFound: "No compatible wallet found",
   walletConnected: "Wallet connected",
+  walletAddressCopied: "Wallet address copied",
+  walletAddressCopyFailed: "Could not copy wallet address",
   walletConnectFailed: "Wallet connection failed",
   signingIn: "Creating nonce and waiting for signature",
   signInSuccess: "Wallet sign-in confirmed",

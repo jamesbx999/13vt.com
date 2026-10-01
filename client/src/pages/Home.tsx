@@ -177,6 +177,24 @@ function BlockchainMetricSkeleton() {
   );
 }
 
+function BlockchainLoadingBrand() {
+  return (
+    <div className="col-span-full flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-slate-600">
+      <img
+        src="/manus-storage/13vt-logo_da29a501.jpg"
+        alt="13vt.com"
+        className="h-9 w-9 rounded-xl object-cover shadow-sm"
+      />
+      <div>
+        <p className="font-semibold text-slate-800">13vt.com</p>
+        <p className="text-xs text-slate-500">
+          Reading live data from BNB Smart Chain…
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function BlockchainQueueRowSkeleton() {
   return (
     <tr className="animate-pulse motion-reduce:animate-none" aria-hidden="true">
@@ -418,6 +436,16 @@ export default function Home() {
   const [claiming, setClaiming] = useState(false);
   const [claimTxHash, setClaimTxHash] = useState("");
   const [claimStatus, setClaimStatus] = useState<TxStatus>("idle");
+
+  const copyConnectedWallet = useCallback(async () => {
+    if (!account) return;
+    try {
+      await navigator.clipboard.writeText(account);
+      toast.success(t("walletAddressCopied"));
+    } catch {
+      toast.error(t("walletAddressCopyFailed"));
+    }
+  }, [account, t, toast]);
   const [claimError, setClaimError] = useState("");
   const [gasEstimate, setGasEstimate] = useState<ClaimGasEstimate | null>(null);
   const [gasEstimateStatus, setGasEstimateStatus] = useState<
@@ -1474,11 +1502,15 @@ export default function Home() {
                     )
                   )}
                   <Button
-                    onClick={() => {
-                      setSignInOpen(true);
-                      setSignInStatus("idle");
-                      setSignInError("");
-                    }}
+                    onClick={() =>
+                      account
+                        ? void copyConnectedWallet()
+                        : (() => {
+                            setSignInOpen(true);
+                            setSignInStatus("idle");
+                            setSignInError("");
+                          })()
+                    }
                     className="wallet-gradient-button gap-2 px-4 text-white hover:bg-slate-800"
                     title={
                       account
@@ -1621,9 +1653,14 @@ export default function Home() {
               aria-busy={loading && !snapshot}
             >
               {loading && !snapshot ? (
-                Array.from({ length: 4 }, (_, index) => (
-                  <BlockchainMetricSkeleton key={`metric-skeleton-${index}`} />
-                ))
+                <>
+                  <BlockchainLoadingBrand />
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <BlockchainMetricSkeleton
+                      key={`metric-skeleton-${index}`}
+                    />
+                  ))}
+                </>
               ) : (
                 <>
                   <MetricCard
@@ -2473,8 +2510,15 @@ export default function Home() {
           >
             <div className="bg-slate-950 p-6 text-white">
               <div className="mb-6 flex items-center justify-between">
-                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-teal-300/15 text-teal-200">
-                  <Wallet size={23} />
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/manus-storage/13vt-logo_da29a501.jpg"
+                    alt="13vt.com"
+                    className="h-12 w-12 rounded-2xl object-cover shadow-lg"
+                  />
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-teal-300/15 text-teal-200">
+                    <Wallet size={23} />
+                  </div>
                 </div>
                 <button
                   disabled={signInStatus === "signing"}
