@@ -222,6 +222,15 @@
     box-shadow: 0 0 12px var(--logo-one);
   }
 
+  .brand-logo-image {
+    height: 2.5rem;
+    width: 2.5rem;
+    flex: 0 0 auto;
+    border-radius: 0.8rem;
+    object-fit: cover;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+  }
+
   .wallet-button-shell {
     --action-accent: #5eead4;
     --action-accent-alt: #818cf8;

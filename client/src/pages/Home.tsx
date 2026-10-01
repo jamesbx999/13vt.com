@@ -353,17 +353,16 @@ function Sidebar({
   return (
     <aside className="hidden w-[238px] shrink-0 border-r border-slate-200/70 bg-white/70 px-3 py-7 lg:block">
       <div className="mb-10 flex items-center gap-3 px-3">
-        <div
-          className="brand-logo-loader"
-          aria-label="Transparent Queue protocol logo"
-        >
-          <span />
-        </div>
+        <img
+          src="/manus-storage/13vt-logo_da29a501.jpg"
+          alt="13vt.com logo"
+          className="brand-logo-image"
+        />
         <div>
           <p className="text-sm font-bold tracking-tight text-slate-900">
-            Transparent
+            13vt.com
           </p>
-          <p className="text-xs text-slate-400">Queue protocol</p>
+          <p className="text-xs text-slate-400">Onchain protocol</p>
         </div>
       </div>
       <nav className="space-y-1.5" aria-label="เมนูหลัก">
@@ -1481,6 +1480,16 @@ export default function Home() {
                       setSignInError("");
                     }}
                     className="wallet-gradient-button gap-2 px-4 text-white hover:bg-slate-800"
+                    title={
+                      account
+                        ? `Connected wallet: ${account}`
+                        : "Connect wallet"
+                    }
+                    aria-label={
+                      account
+                        ? `Connected wallet ${shortAddress(account)}`
+                        : "Connect wallet"
+                    }
                   >
                     <Wallet size={16} />
                     {signInStatus === "signing"
