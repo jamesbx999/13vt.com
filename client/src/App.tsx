@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import { TransactionJournalProvider } from "./contexts/TransactionJournalContext";
 import Home from "./pages/Home";
 import OwnerDashboard from "./pages/OwnerDashboard";
 
@@ -37,8 +38,10 @@ function App() {
         <TooltipProvider>
           <LanguageProvider>
             <SettingsProvider>
-              <Toaster />
-              <Router />
+              <TransactionJournalProvider>
+                <Toaster />
+                <Router />
+              </TransactionJournalProvider>
             </SettingsProvider>
           </LanguageProvider>
         </TooltipProvider>

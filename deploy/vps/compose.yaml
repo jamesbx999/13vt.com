@@ -27,6 +27,8 @@ services:
     build:
       context: ../..
       dockerfile: deploy/vps/Dockerfile
+      args:
+        VITE_ONCHAIN_OWNER_WALLET: ${ONCHAIN_OWNER_WALLET:?Set ONCHAIN_OWNER_WALLET in deploy/vps/.env}
     restart: unless-stopped
     environment:
       NODE_ENV: production

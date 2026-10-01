@@ -48,7 +48,7 @@ test('U1 must have a successful mock payout AND both children before U2 enters F
   const { model, operator, other } = await setup();
   const u1 = await seed(model, operator.address, ref('U1-deposit-2'));
   const a1 = await addA(model, other.address, ref('A1-deposit-2'));
-  const d = await addA(model, other.address, ref('D-deposit-2'));
+  const d = await addA(model, other.address); // D #2 is NOT assigned as D's reserve by the latest rule.
 
   assert.equal(await model.nextOpenParent(), u1);
   assert.equal(await model.paymentState(u1), 1n);
@@ -62,7 +62,7 @@ test('U1 must have a successful mock payout AND both children before U2 enters F
   assert.equal((await model.positions(u1)).rightId, d);
   assert.equal(await model.nextId(), 4n, 'right alone without payout proof must not create U2');
   assert.equal(await model.nextOpenParent(), a1);
-  await (await model.recordMockPayout(u1, ref('U1-mock-paid'), gas)).wait();
+  await (await model.recordMockPayout(u1, ref('U1-deposit-2'), gas)).wait();
 
   const u2 = 4n;
   assert.equal(await model.queueLength(), 4n);
@@ -72,7 +72,8 @@ test('U1 must have a successful mock payout AND both children before U2 enters F
   assert.equal(await model.paymentState(u1), 2n);
   assert.equal(await model.paymentState(u2), 0n);
   assert.equal((await model.positions(u2)).illustrativeFundingRef, '0x' + '00'.repeat(32));
-  assert.equal((await model.positions(d)).illustrativeFundingRef, ref('D-deposit-2'));
+  assert.equal((await model.positions(d)).illustrativeFundingRef, '0x' + '00'.repeat(32));
+  assert.equal(await model.paymentState(d), 0n);
   await assert.rejects(model.recordMockPayout(u1, ref('duplicate')), 'once-only payout marker');
   await assert.rejects(model.connect(other).enqueueQualifiedFromA(other.address, ref('unauthorized')));
 });
@@ -81,9 +82,9 @@ test('unfunded U2 receives left and right in place-and-hold without being skippe
   const { model, operator, other } = await setup();
   await seed(model, operator.address, ref('U1-deposit-2'));
   const a1 = await addA(model, other.address, ref('A1-deposit-2'));
-  const d = await addA(model, other.address, ref('D-deposit-2'));
+  const d = await addA(model, other.address);
   await place(model, a1);
-  await (await model.recordMockPayout(1, ref('U1-mock-paid'), gas)).wait();
+  await (await model.recordMockPayout(1, ref('U1-deposit-2'), gas)).wait();
   await place(model, d); // Both slots: reborn in the same transaction.
   assert.equal(await model.nextId(), 5n);
   assert.equal(await model.paymentState(4), 0n);
@@ -113,4 +114,19 @@ test('unfunded U2 receives left and right in place-and-hold without being skippe
   assert.equal(await model.nextId(), before, 'no U3 without successful payout proof');
   assert.equal(await model.paymentState(4), 0n);
   await assert.rejects(async () => (await model.place(right)).wait(), 'child cannot be placed twice');
+});
+
+test('illustrative funding refs are unique and cannot mark another position paid', async () => {
+  const { model, operator, other } = await setup();
+  const u1 = await seed(model, operator.address, ref('U1-deposit-2'));
+  const a1 = await addA(model, other.address, ref('A1-deposit-2'));
+  await assert.rejects(model.enqueueQualifiedFromA(other.address, ref('U1-deposit-2')), 'same illustrative deposit cannot fund two positions');
+  const unassigned = await addA(model, other.address);
+  await assert.rejects(model.recordMockFunding(unassigned, ref('U1-deposit-2')), 'cannot attach an already-used funding ref');
+  await place(model, a1);
+  await assert.rejects(model.recordMockPayout(u1, ref('A1-deposit-2')), 'wrong deposit cannot simulate payout for U1');
+  assert.equal(await model.paymentState(u1), 1n);
+  await (await model.recordMockPayout(u1, ref('U1-deposit-2'), gas)).wait();
+  assert.equal(await model.paymentState(u1), 2n);
+  assert.equal(await model.paymentState(unassigned), 0n);
 });

@@ -58,6 +58,13 @@ import {
   submitClaim,
 } from "@/lib/queue";
 import { LanguageSwitcher, useLanguage } from "@/contexts/LanguageContext";
+import { useTransactionJournal } from "@/contexts/TransactionJournalContext";
+import {
+  errorOutcome,
+  isBscMainnet,
+  receiptOutcome,
+  type JournalStatus,
+} from "@/lib/transactionJournal";
 import {
   SettingsPanel,
   useAppToast,
@@ -76,12 +83,23 @@ declare global {
 }
 
 const EXPLORER = "https://bscscan.com";
-const OWNER_ADDRESS = "0x11B948575B648be50Eef781251ebdc876907E618";
+const OWNER_ADDRESS =
+  import.meta.env.VITE_ONCHAIN_OWNER_WALLET ||
+  "0x11B948575B648be50Eef781251ebdc876907E618";
 const FEE_RECIPIENT = "0xE465e694E9194b848D597b21ce4104f9C36Fc6d2";
 const SUGGESTED_REFERRER = "0x5B3809F3f0b1f3D35Ae9F956fDbf777A3fF7DbfC";
 const SESSION_KEY = "onchain-queue-session";
 const SESSION_TTL_MS = 30 * 60 * 1000;
-type TxStatus = "idle" | "pending" | "confirmed" | "reverted";
+async function assertBscWriteNetwork(provider: any) {
+  if (!provider?.request)
+    throw new Error("ไม่พบ Wallet provider สำหรับส่งธุรกรรม");
+  const chain = await provider.request({ method: "eth_chainId" });
+  if (!isBscMainnet(chain))
+    throw new Error(
+      "โปรดเปลี่ยนกระเป๋าเป็น BNB Smart Chain (Chain ID 56) ก่อนส่งธุรกรรม"
+    );
+}
+type TxStatus = "idle" | JournalStatus;
 type AdminAction = "pause" | "unpause" | "registerFor";
 const DEMO_ROWS = [
   {
@@ -260,7 +278,22 @@ function TransactionStatus({
       icon: CheckCircle2,
     },
   ];
-  const failed = status === "reverted";
+  const failed =
+    status === "reverted" || status === "rejected" || status === "failed";
+  const label =
+    status === "awaiting_wallet"
+      ? "รอยืนยันใน Wallet"
+      : status === "pending"
+        ? "รอ Receipt บนเชน"
+        : status === "confirmed"
+          ? "ยืนยันบนเชนแล้ว"
+          : status === "reverted"
+            ? "ธุรกรรม Reverted"
+            : status === "rejected"
+              ? "Wallet ปฏิเสธ"
+              : status === "unknown"
+                ? "ยังไม่ทราบผลบนเชน"
+                : "ส่งไม่สำเร็จ";
   return (
     <div
       className={`rounded-2xl border p-4 ${failed ? "border-rose-200 bg-rose-50" : status === "confirmed" ? "border-emerald-200 bg-emerald-50" : "border-blue-200 bg-blue-50"}`}
@@ -273,6 +306,8 @@ function TransactionStatus({
             <XCircle size={18} />
           ) : status === "confirmed" ? (
             <CheckCircle2 size={18} />
+          ) : status === "unknown" ? (
+            <AlertTriangle size={18} />
           ) : (
             <Loader2 className="animate-spin" size={18} />
           )}
@@ -282,11 +317,7 @@ function TransactionStatus({
             <p
               className={`text-sm font-bold ${failed ? "text-rose-900" : status === "confirmed" ? "text-emerald-900" : "text-blue-900"}`}
             >
-              {failed
-                ? "Reverted"
-                : status === "confirmed"
-                  ? "Confirmed"
-                  : "Pending"}
+              {label}
             </p>
             {txHash && (
               <a
@@ -300,12 +331,16 @@ function TransactionStatus({
             )}
           </div>
           <p className="mt-1 text-xs leading-5 text-slate-600">
-            {failed
-              ? error ||
-                "The transaction was rejected or reverted by the Contract"
-              : status === "confirmed"
-                ? "ยอดและStatus Ticket จะรีเฟรชจาก Smart Contract"
-                : "Do not close MetaMask or change networks while waiting"}
+            {error ||
+              (status === "unknown"
+                ? "ตรวจ Hash บน Explorer ก่อนลองส่งซ้ำ"
+                : status === "confirmed"
+                  ? "อ่านยอดและสถานะจาก Smart Contract อีกครั้ง"
+                  : status === "awaiting_wallet"
+                    ? "ตรวจรายละเอียดใน Wallet ก่อนยืนยัน"
+                    : status === "pending"
+                      ? "Hash ไม่ใช่หลักฐานว่าสำเร็จ รอ Receipt ก่อน"
+                      : "ตรวจสถานะบนเชนก่อนดำเนินการต่อ")}
           </p>
         </div>
       </div>
@@ -343,7 +378,7 @@ function TransactionStatus({
             </div>
           );
         })}
-        {failed && (
+        {status === "reverted" && (
           <span className="ml-auto inline-flex items-center gap-1 text-rose-700">
             <XCircle size={13} /> Contract reverted
           </span>
@@ -402,8 +437,8 @@ function Sidebar({
           <span className="text-xs font-semibold">Read-only by default</span>
         </div>
         <p className="text-xs leading-5 text-slate-300">
-          Core data comes directly from the Smart Contract; no token transfer
-          permission is requested.
+          Reading is read-only. The separate Stake action requests token
+          approval in your wallet; review the amount and contract first.
         </p>
       </div>
     </aside>
@@ -413,6 +448,7 @@ function Sidebar({
 export default function Home() {
   const { t } = useLanguage();
   const toast = useAppToast();
+  const journal = useTransactionJournal();
   const { refreshInterval, isPageVisible, autoRefreshPaused } = useSettings();
   const [active, setActive] = useState("overview");
   const [contractAddress, setContractAddress] = useState(
@@ -468,6 +504,7 @@ export default function Home() {
   const [stakeOpen, setStakeOpen] = useState(false);
   const [staking, setStaking] = useState(false);
   const [stakeError, setStakeError] = useState("");
+  const [stakeUnknown, setStakeUnknown] = useState(false);
   const [adminAction, setAdminAction] = useState<AdminAction | null>(null);
   const [adminUserAddress, setAdminUserAddress] = useState("");
   const [adminTxStatus, setAdminTxStatus] = useState<TxStatus>("idle");
@@ -794,12 +831,17 @@ export default function Home() {
       );
       return;
     }
+    const trackingId = journal.start(t("registrationPreparing"));
+    let broadcastHash = "";
+    let minedOutcome: ReturnType<typeof receiptOutcome> = null;
+    setRegistrationHash("");
     setRegistrationStatus("pending");
     setRegistrationError("");
     toast.info(t("registrationPreparing"), {
       description: t("reviewBeforeSend"),
     });
     try {
+      await assertBscWriteNetwork(provider);
       const transaction: any = submitReferralRegistration(
         provider,
         contractAddress,
@@ -807,25 +849,31 @@ export default function Home() {
         SUGGESTED_REFERRER,
         referralCode
       );
-      transaction.on("transactionHash", (hash: string) =>
-        setRegistrationHash(hash)
-      );
+      transaction.on("transactionHash", (hash: string) => {
+        broadcastHash = hash;
+        setRegistrationHash(hash);
+        journal.sent(trackingId, hash);
+      });
       const receipt = await transaction;
-      const failed =
-        receipt?.status === false ||
-        receipt?.status === 0 ||
-        receipt?.status === "0x0" ||
-        String(receipt?.status) === "0";
-      if (failed) throw new Error("Contract ไม่ยืนยันการลงทะเบียน");
+      minedOutcome = receiptOutcome(receipt);
+      journal.receipt(trackingId, receipt);
+      if (minedOutcome !== "confirmed")
+        throw new Error("Contract ไม่ยืนยันการลงทะเบียน");
       setRegistrationStatus("confirmed");
       toast.success(t("registrationConfirmed"), {
         description: t("registrationConfirmed"),
       });
       await loadOnchain();
     } catch (registrationWriteError: any) {
+      journal.error(trackingId, registrationWriteError);
       setRegistrationStatus("error");
       setRegistrationError(
-        registrationWriteError?.message || "ไม่สามารถลงทะเบียน Referral ได้"
+        minedOutcome === "reverted"
+          ? "Contract Revert: ลงทะเบียนไม่สำเร็จ"
+          : broadcastHash
+            ? "ผลหลังส่งยังไม่ชัดเจน: ตรวจ Hash บน Explorer ก่อนส่งซ้ำ"
+            : registrationWriteError?.message ||
+              "ไม่สามารถลงทะเบียน Referral ได้"
       );
       toast.error(t("registrationFailed"), {
         description:
@@ -1166,7 +1214,7 @@ export default function Home() {
     });
   }
 
-  function confirmClaim() {
+  async function confirmClaim() {
     if (!claimTicket || !account) return;
     if (gasEstimateStatus !== "ready") {
       toast.error("ยังคำนวณค่า Gas ไม่เสร็จ", {
@@ -1175,9 +1223,13 @@ export default function Home() {
       return;
     }
     setClaiming(true);
-    setClaimStatus("pending");
+    setClaimStatus("awaiting_wallet");
     setClaimError("");
+    const trackingId = journal.start(`Claim ticket #${claimTicket.id}`);
+    let sentHash = "";
+    let receiptSeen = false;
     try {
+      await assertBscWriteNetwork(provider);
       const transaction: any = submitClaim(
         provider,
         contractAddress,
@@ -1185,6 +1237,8 @@ export default function Home() {
         account
       );
       transaction.on("transactionHash", (hash: string) => {
+        sentHash = hash;
+        journal.sent(trackingId, hash);
         setClaimTxHash(hash);
         setClaimStatus("pending");
         toast.info("ธุรกรรมอยู่ระหว่าง Pending", {
@@ -1192,39 +1246,45 @@ export default function Home() {
         });
       });
       transaction.on("receipt", async (receipt: any) => {
-        const failed =
-          receipt?.status === false ||
-          receipt?.status === 0 ||
-          receipt?.status === "0x0" ||
-          String(receipt?.status) === "0";
-        if (failed) {
+        receiptSeen = true;
+        journal.receipt(trackingId, receipt);
+        const outcome = receiptOutcome(receipt);
+        if (outcome === "reverted") {
           setClaimStatus("reverted");
           setClaimError(
             "Contract คืนค่าไม่สำเร็จ ธุรกรรมไม่ได้เปลี่ยนStatus Ticket"
           );
           toast.error("ธุรกรรม Reverted");
-        } else {
+        } else if (outcome === "confirmed") {
           setClaimStatus("confirmed");
           setClaiming(false);
           toast.success("ธุรกรรม Confirmed", {
             description: "Claim ถูกบันทึกบน BNB Smart Chain แล้ว",
           });
           await loadOnchain();
+        } else {
+          setClaimStatus("unknown");
+          setClaimError("Receipt ไม่มีสถานะที่ตรวจสอบได้ กรุณาตรวจบน Explorer");
         }
         setClaiming(false);
       });
       transaction.on("error", (transactionError: any) => {
+        if (receiptSeen) return;
+        journal.error(trackingId, transactionError);
         const message =
           transactionError?.message ||
           "ผู้ใช้ยกเลิกหรือ Contract revert ธุรกรรม";
-        setClaimStatus("reverted");
+        setClaimStatus(errorOutcome(Boolean(sentHash), transactionError));
         setClaimError(message);
         setClaiming(false);
-        toast.error("ธุรกรรม Reverted", { description: message });
+        toast.error(sentHash ? "ยังตรวจผลบนเชนไม่ได้" : "ส่งธุรกรรมไม่สำเร็จ", {
+          description: message,
+        });
       });
     } catch (claimError: any) {
       const message = claimError?.message || "ไม่สามารถเริ่มธุรกรรมได้";
-      setClaimStatus("reverted");
+      journal.error(trackingId, claimError);
+      setClaimStatus(errorOutcome(Boolean(sentHash), claimError));
       setClaimError(message);
       setClaiming(false);
       toast.error("เริ่มธุรกรรมไม่สำเร็จ", { description: message });
@@ -1236,6 +1296,7 @@ export default function Home() {
   }
 
   async function confirmReferralStake() {
+    if (stakeUnknown) return;
     if (
       !provider ||
       !snapshot ||
@@ -1246,7 +1307,12 @@ export default function Home() {
       return;
     setStaking(true);
     setStakeError("");
+    let approvalId = "";
+    let stakeId = "";
+    let lastStep: "approval" | "stake" = "approval";
+    let uncertainHash = "";
     try {
+      await assertBscWriteNetwork(provider);
       const totalDue = (
         BigInt(referralStatus.requiredStake) + BigInt(referralStatus.feeAmount)
       ).toString();
@@ -1255,7 +1321,25 @@ export default function Home() {
         snapshot.asset,
         contractAddress,
         account,
-        totalDue
+        totalDue,
+        (step, stage, value) => {
+          lastStep = step;
+          if (stage === "wallet") {
+            uncertainHash = "";
+            if (step === "approval")
+              approvalId = journal.start("Token approval");
+            else stakeId = journal.start("Stake Referral");
+          }
+          const id = step === "approval" ? approvalId : stakeId;
+          if (id && stage === "hash" && typeof value === "string") {
+            uncertainHash = value;
+            journal.sent(id, value);
+          }
+          if (id && stage === "receipt") {
+            journal.receipt(id, value);
+            uncertainHash = "";
+          }
+        }
       );
       setStakeOpen(false);
       toast.success("Stake Referral สำเร็จ", {
@@ -1263,8 +1347,14 @@ export default function Home() {
       });
       await loadOnchain();
     } catch (stakeWriteError: any) {
+      const id = lastStep === "approval" ? approvalId : stakeId;
+      if (id) journal.error(id, stakeWriteError);
+      if (uncertainHash) setStakeUnknown(true);
       setStakeError(
-        stakeWriteError?.message || "Stake ไม่สำเร็จหรือผู้ใช้ยกเลิกใน MetaMask"
+        uncertainHash
+          ? "ยังไม่ทราบผลหลังส่ง: ตรวจ Hash ในหน้าสถานะธุรกรรมหรือ Explorer ก่อนทำซ้ำ"
+          : stakeWriteError?.message ||
+              "Stake ไม่สำเร็จหรือผู้ใช้ยกเลิกใน MetaMask"
       );
     } finally {
       setStaking(false);
@@ -1287,8 +1377,9 @@ export default function Home() {
     setAdminGasError("");
   }
 
-  function confirmAdminAction() {
+  async function confirmAdminAction() {
     if (!adminAction || !account || !canAdmin) return;
+    if (adminTxStatus === "unknown" && adminTxHash) return;
     if (
       adminAction === "registerFor" &&
       !Web3.utils.isAddress(adminUserAddress)
@@ -1300,10 +1391,14 @@ export default function Home() {
       setAdminError("กรุณารอการคำนวณ Gas ให้เสร็จก่อนยืนยันธุรกรรม");
       return;
     }
-    setAdminTxStatus("pending");
+    setAdminTxStatus("awaiting_wallet");
     setAdminTxHash("");
     setAdminError("");
+    const trackingId = journal.start(`Admin: ${adminAction}`);
+    let sentHash = "";
+    let receiptSeen = false;
     try {
+      await assertBscWriteNetwork(provider);
       const transaction: any = submitAdminAction(
         provider,
         contractAddress,
@@ -1313,42 +1408,52 @@ export default function Home() {
         adminGasEstimate.bufferedGasUnits
       );
       transaction.on("transactionHash", (hash: string) => {
+        sentHash = hash;
+        journal.sent(trackingId, hash);
         setAdminTxHash(hash);
+        setAdminTxStatus("pending");
         toast.info("Admin transaction อยู่ระหว่าง Pending", {
           description: shortAddress(hash),
         });
       });
       transaction.on("receipt", async (receipt: any) => {
-        const failed =
-          receipt?.status === false ||
-          receipt?.status === 0 ||
-          receipt?.status === "0x0" ||
-          String(receipt?.status) === "0";
-        if (failed) {
+        receiptSeen = true;
+        journal.receipt(trackingId, receipt);
+        const outcome = receiptOutcome(receipt);
+        if (outcome === "reverted") {
           setAdminTxStatus("reverted");
           setAdminError(
             "Contract คืนค่าไม่สำเร็จ ธุรกรรม Admin ไม่ได้เปลี่ยนStatus"
           );
           toast.error("Admin transaction Reverted");
-        } else {
+        } else if (outcome === "confirmed") {
           setAdminTxStatus("confirmed");
           toast.success("Admin transaction Confirmed", {
             description: "Status Contract จะถูกอ่านใหม่จากเชน",
           });
           await loadOnchain();
+        } else {
+          setAdminTxStatus("unknown");
+          setAdminError("Receipt ไม่มีสถานะที่ตรวจสอบได้ กรุณาตรวจบน Explorer");
         }
       });
       transaction.on("error", (transactionError: any) => {
-        setAdminTxStatus("reverted");
+        if (receiptSeen) return;
+        journal.error(trackingId, transactionError);
+        setAdminTxStatus(errorOutcome(Boolean(sentHash), transactionError));
         setAdminError(
-          transactionError?.message ||
-            "ผู้ใช้ยกเลิกหรือ Contract revert ธุรกรรม"
+          sentHash
+            ? "ยังไม่ทราบผล: ตรวจ Hash บน Explorer ก่อนส่งซ้ำ"
+            : transactionError?.message || "ผู้ใช้ยกเลิกธุรกรรม"
         );
       });
     } catch (adminWriteError: any) {
-      setAdminTxStatus("reverted");
+      journal.error(trackingId, adminWriteError);
+      setAdminTxStatus(errorOutcome(Boolean(sentHash), adminWriteError));
       setAdminError(
-        adminWriteError?.message || "ไม่สามารถเริ่มธุรกรรม Admin ได้"
+        sentHash
+          ? "ยังไม่ทราบผล: ตรวจ Hash บน Explorer ก่อนส่งซ้ำ"
+          : adminWriteError?.message || "ไม่สามารถเริ่มธุรกรรม Admin ได้"
       );
     }
   }
@@ -1553,9 +1658,9 @@ export default function Home() {
                   Verify the queue and allocated revenue from on-chain data
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                  Connect MetaMask to read the queue state from the selected
-                  Contract. This website never requests token transfer
-                  permission and does not guarantee returns.
+                  Connect MetaMask to read the selected Contract without token
+                  approval. The separate Stake action asks for approval in your
+                  wallet. No returns are guaranteed.
                 </p>
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
@@ -2859,22 +2964,23 @@ export default function Home() {
                 >
                   {adminTxStatus === "confirmed" ? "ปิด" : "ยกเลิก"}
                 </Button>
-                {adminTxStatus !== "confirmed" && (
-                  <Button
-                    disabled={adminTxStatus === "pending"}
-                    onClick={confirmAdminAction}
-                    className="gap-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700"
-                  >
-                    {adminTxStatus === "pending" ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : (
-                      <ShieldCheck size={16} />
-                    )}
-                    {adminTxStatus === "pending"
-                      ? "กำลังรอ MetaMask"
-                      : "ยืนยันและส่ง"}
-                  </Button>
-                )}
+                {adminTxStatus !== "confirmed" &&
+                  !(adminTxStatus === "unknown" && adminTxHash) && (
+                    <Button
+                      disabled={adminTxStatus === "pending"}
+                      onClick={confirmAdminAction}
+                      className="gap-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700"
+                    >
+                      {adminTxStatus === "pending" ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <ShieldCheck size={16} />
+                      )}
+                      {adminTxStatus === "pending"
+                        ? "กำลังรอ MetaMask"
+                        : "ยืนยันและส่ง"}
+                    </Button>
+                  )}
               </div>
             </div>
           </section>
@@ -2964,7 +3070,7 @@ export default function Home() {
                   ยกเลิก
                 </Button>
                 <Button
-                  disabled={staking}
+                  disabled={staking || stakeUnknown}
                   onClick={confirmReferralStake}
                   className="gap-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700"
                 >
@@ -2973,7 +3079,11 @@ export default function Home() {
                   ) : (
                     <ShieldCheck size={16} />
                   )}
-                  {staking ? "กำลังรอ MetaMask" : "อนุมัติและ Stake"}
+                  {stakeUnknown
+                    ? "ตรวจ Hash ก่อนลองใหม่"
+                    : staking
+                      ? "กำลังรอ MetaMask"
+                      : "อนุมัติและ Stake"}
                 </Button>
               </div>
             </div>
@@ -3117,8 +3227,14 @@ export default function Home() {
                 />
               )}{" "}
               {claimTxHash && (
-                <div className="rounded-xl bg-emerald-50 p-3 text-xs text-emerald-800">
-                  ส่งแล้ว:{" "}
+                <div
+                  className={`rounded-xl p-3 text-xs ${claimStatus === "confirmed" ? "bg-emerald-50 text-emerald-800" : claimStatus === "reverted" ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-900"}`}
+                >
+                  {claimStatus === "confirmed"
+                    ? "ยืนยันบนเชนแล้ว:"
+                    : claimStatus === "reverted"
+                      ? "ถูก Revert:"
+                      : "ส่งขึ้นเชนแล้ว · ยังไม่ยืนยันผล:"}{" "}
                   <a
                     className="font-semibold underline"
                     href={`${EXPLORER}/tx/${claimTxHash}`}

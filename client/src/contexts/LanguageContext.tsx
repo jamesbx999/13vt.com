@@ -139,10 +139,10 @@ const common = {
   queueProtocol: "Queue protocol",
   readOnlyByDefault: "Read-only by default",
   contractDataDirect:
-    "Data comes directly from the Smart Contract; no token transfer permission is requested.",
+    "Reading contract data requires no token approval; the separate Stake action does.",
   heroTitle: "Verify the queue and allocated revenue from on-chain data",
   heroDescription:
-    "Connect MetaMask to read the queue state from the selected Contract. This website never requests token transfer permission and does not guarantee returns.",
+    "Read the selected Contract without token approval. The separate Stake action requires wallet approval. No returns are guaranteed.",
   contractAddressPlaceholder: "Enter a verified Contract Address",
   loadingData: "Reading data",
   queueDescription: "Data from the Contract ticket getter",

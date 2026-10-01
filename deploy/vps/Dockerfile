@@ -6,6 +6,8 @@ COPY package.json pnpm-lock.yaml ./
 COPY patches ./patches
 RUN pnpm install --frozen-lockfile
 COPY . .
+ARG VITE_ONCHAIN_OWNER_WALLET
+ENV VITE_ONCHAIN_OWNER_WALLET=$VITE_ONCHAIN_OWNER_WALLET
 RUN pnpm check && pnpm exec vite build --config deploy/vps/vite.config.ts \
     && pnpm exec esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
 

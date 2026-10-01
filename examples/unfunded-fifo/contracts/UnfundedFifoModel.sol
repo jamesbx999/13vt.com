@@ -35,6 +35,8 @@ contract UnfundedFifoModel {
     error NotFunded();
     error PayoutAlreadyConfirmed();
     error InvalidReference();
+    error DuplicateFundingReference();
+    error PayoutReferenceMismatch();
     error RootAlreadySeeded();
 
     address public immutable operator;
@@ -42,6 +44,7 @@ contract UnfundedFifoModel {
     uint256 public head; // Index of the oldest open parent in the ONE global queue.
     uint64[] public fifo;
     mapping(uint64 => Position) public positions;
+    mapping(bytes32 => bool) public illustrativeFundingRefUsed;
     bool public rootSeeded;
 
     event Enqueued(uint64 indexed id, address indexed owner, Origin origin, uint64 sequence);
@@ -109,8 +112,8 @@ contract UnfundedFifoModel {
     }
 
     /**
-     * @dev An operator-controlled MOCK of observed payout success. It does not send tokens
-     *      or validate an on-chain transfer. Used only to exercise transition ordering.
+     * @dev Operator-controlled MOCK only: require the SAME illustrative funding reference
+     *      assigned to this position. This is NOT proof of a deposit or actual payout.
      */
     function recordMockPayout(uint64 id, bytes32 fundingOrPayoutRef) external onlyOperator returns (uint64 successor) {
         Position storage p = _position(id);
@@ -118,6 +121,7 @@ contract UnfundedFifoModel {
         if (p.illustrativeFundingRef == bytes32(0)) revert NotFunded();
         if (p.payoutConfirmed) revert PayoutAlreadyConfirmed();
         if (fundingOrPayoutRef == bytes32(0)) revert InvalidReference();
+        if (fundingOrPayoutRef != p.illustrativeFundingRef) revert PayoutReferenceMismatch();
         p.payoutConfirmed = true;
         p.illustrativePayoutRef = fundingOrPayoutRef;
         emit MockPayoutRecorded(id, fundingOrPayoutRef);
@@ -155,6 +159,8 @@ contract UnfundedFifoModel {
 
     function _recordFunding(uint64 id, bytes32 fundingOrPayoutRef) internal {
         if (fundingOrPayoutRef == bytes32(0)) revert InvalidReference();
+        if (illustrativeFundingRefUsed[fundingOrPayoutRef]) revert DuplicateFundingReference();
+        illustrativeFundingRefUsed[fundingOrPayoutRef] = true;
         positions[id].illustrativeFundingRef = fundingOrPayoutRef;
         emit MockFundingRecorded(id, fundingOrPayoutRef);
     }
