@@ -1,0 +1,15 @@
+{
+  "name": "13vt-unfunded-fifo-educational-model",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Educational state-only FIFO/UNFUNDED example: no token custody or payouts",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "ethers": "6.15.0",
+    "ganache": "7.9.2",
+    "solc": "0.8.30"
+  }
+}
