@@ -1,0 +1,15 @@
+{$SITE_DOMAIN} {
+    encode zstd gzip
+
+    # The original app uses this Manus-storage path for its logo. Serve only
+    # this exact public asset locally; all other storage URLs still require a
+    # separately configured storage provider and must NOT be silently proxied.
+    handle /manus-storage/13vt-logo_da29a501.jpg {
+        root * /srv
+        file_server
+    }
+
+    handle {
+        reverse_proxy app:3000
+    }
+}

@@ -1,0 +1,65 @@
+name: 13vt
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: onchain_queue
+      MYSQL_USER: queue
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in deploy/vps/.env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in deploy/vps/.env}
+      TZ: UTC
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mysqladmin ping -h 127.0.0.1 -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD" --silent',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks: [private]
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/vps/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://queue:${DB_PASSWORD:?Set DB_PASSWORD in deploy/vps/.env}@db:3306/onchain_queue
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in deploy/vps/.env}
+      ONCHAIN_OWNER_WALLET: ${ONCHAIN_OWNER_WALLET:?Set ONCHAIN_OWNER_WALLET in deploy/vps/.env}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [private]
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN in deploy/vps/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./assets:/srv/manus-storage:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [app]
+    networks: [private]
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  private:
+    driver: bridge

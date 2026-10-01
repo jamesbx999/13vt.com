@@ -1,0 +1,15 @@
+**/.git
+**/.env
+**/.env.*
+**/node_modules
+**/dist
+**/build
+**/.manus*
+**/.webdev
+**/coverage
+**/.cache
+**/*.log
+**/*.sqlite
+**/*.db
+**/*.bundle
+**/*.zip

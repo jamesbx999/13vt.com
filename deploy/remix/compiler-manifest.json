@@ -1,0 +1,16 @@
+{
+  "contract": "UnfundedFifoModel",
+  "source": "UnfundedFifoModel.sol",
+  "sourceSha256": "d16198f59a3cd8b33a2997586f0d78cb6b4252cc6fefb8447141a8dcce3022bd",
+  "compiler": "solc 0.8.30",
+  "pragma": "^0.8.24",
+  "optimizer": {
+    "enabled": true,
+    "runs": 200
+  },
+  "evmVersion": "compiler default (local test configuration)",
+  "simulationEnvironment": "Remix VM only",
+  "hasTokenTransfers": false,
+  "audited": false,
+  "liveNetworkReady": false
+}
