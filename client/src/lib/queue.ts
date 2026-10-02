@@ -114,6 +114,12 @@ export type RebornEvent = {
   recipient: string;
 };
 
+export type TicketStatus = {
+  recipient: string;
+  amount: string;
+  claimed: boolean;
+};
+
 function tupleValue(value: any, name: string, index: number) {
   return value?.[name] ?? value?.[index] ?? 0;
 }
@@ -432,6 +438,23 @@ export async function readRebornEvents(
       successorId: String(tupleValue(event.returnValues, "successorId", 1)),
       recipient: String(tupleValue(event.returnValues, "recipient", 2)),
     }));
+}
+
+export async function readTicketStatus(
+  provider: any,
+  contractAddress: string,
+  ticketId: string
+): Promise<TicketStatus> {
+  if (!provider || !isAddress(contractAddress))
+    throw new Error("ไม่พบ Provider หรือ Contract Address ไม่ถูกต้อง");
+  const web3 = new Web3(provider);
+  const contract: any = new web3.eth.Contract(QUEUE_ABI as any, contractAddress);
+  const ticket: any = await contract.methods.tickets(ticketId).call();
+  return {
+    recipient: String(tupleValue(ticket, "recipient", 0)),
+    amount: String(tupleValue(ticket, "amount", 1)),
+    claimed: Boolean(tupleValue(ticket, "claimed", 2)),
+  };
 }
 
 export async function readReferralStatus(
