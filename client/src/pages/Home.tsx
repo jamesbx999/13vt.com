@@ -63,7 +63,6 @@ import { TestnetTransferPanel } from "@/components/TestnetTransferPanel";
 import { FeeSimulationPanel } from "@/components/FeeSimulationPanel";
 import { FifoQueueDashboard } from "@/components/FifoQueueDashboard";
 import { EthersFifoTestnetPanel } from "@/components/EthersFifoTestnetPanel";
-import { UpgradeableOwnerPanel } from "@/components/UpgradeableOwnerPanel";
 import {
   errorOutcome,
   isBscMainnet,
@@ -2077,7 +2076,9 @@ export default function Home() {
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-slate-500">Service Fee</span>
-                      <span className="font-bold text-teal-700">0.0013 BNB</span>
+                      <span className="font-bold text-teal-700">
+                        0.0013 BNB
+                      </span>
                     </div>
                   </div>
                   <div className="mt-4 rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-600">
@@ -2109,8 +2110,8 @@ export default function Home() {
                     </p>
                   )}
                   <p className="mt-3 text-[10px] leading-4 text-slate-400">
-                    กฎปัจจุบัน: สมาชิกฝาก 13 USDT และส่งค่าบริการ 0.0013 BNB
-                    ให้ Contract ตรวจสอบตามเครือข่ายที่เลือก; ค่า Referral/Stake
+                    กฎปัจจุบัน: สมาชิกฝาก 13 USDT และส่งค่าบริการ 0.0013 BNB ให้
+                    Contract ตรวจสอบตามเครือข่ายที่เลือก; ค่า Referral/Stake
                     รุ่นเก่าไม่ใช่กฎของ 13VT
                   </p>
                 </section>
@@ -2400,7 +2401,6 @@ export default function Home() {
             <FeeSimulationPanel />
             <FifoQueueDashboard />
             <EthersFifoTestnetPanel />
-            <UpgradeableOwnerPanel />
 
             <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
               <div className="flex flex-col gap-4 border-b border-slate-100 p-5">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BrowserProvider,
   Contract,
@@ -8,7 +8,16 @@ import {
   parseEther,
   parseUnits,
 } from "ethers";
-import { ExternalLink, Loader2, ShieldCheck, Wallet } from "lucide-react";
+import {
+  Coins,
+  Database,
+  ExternalLink,
+  Gauge,
+  KeyRound,
+  Loader2,
+  ShieldCheck,
+  Wallet,
+} from "lucide-react";
 
 const TESTNET_CHAIN_ID = BigInt(97);
 const RPC_URL = "https://bsc-testnet-dataseed.bnbchain.org";
@@ -150,6 +159,9 @@ export function UpgradeableOwnerPanel() {
       setBusy(false);
     }
   }
+  useEffect(() => {
+    void readConfig();
+  }, []);
   const isOwner = Boolean(
     config && account && config.owner.toLowerCase() === account.toLowerCase()
   );
@@ -202,44 +214,110 @@ export function UpgradeableOwnerPanel() {
         </button>
       </div>
       {config && (
-        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
-          <div className="rounded-lg bg-white p-3 font-mono">
-            Proxy: {short(proxy)}{" "}
-            <a
-              href={`${EXPLORER}/address/${proxy}`}
-              target="_blank"
-              rel="noreferrer"
+        <div className="mt-5 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4">
+              <div className="flex items-center justify-between text-teal-700">
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                  Current service fee
+                </span>
+                <Coins size={17} />
+              </div>
+              <p className="mt-2 text-2xl font-black tracking-tight text-teal-950">
+                {config.fee} <span className="text-sm font-bold">BNB</span>
+              </p>
+              <p className="mt-1 text-[11px] text-teal-800/70">
+                เรียกเก็บตามค่าที่อ่านจาก Proxy
+              </p>
+            </div>
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+              <div className="flex items-center justify-between text-blue-700">
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                  Deposit amount
+                </span>
+                <Database size={17} />
+              </div>
+              <p className="mt-2 text-2xl font-black tracking-tight text-blue-950">
+                {config.deposit} <span className="text-sm font-bold">USDT</span>
+              </p>
+              <p className="mt-1 text-[11px] text-blue-800/70">
+                Asset decimals: {config.decimals}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+              <div className="flex items-center justify-between text-violet-700">
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                  Max fund tickets
+                </span>
+                <Gauge size={17} />
+              </div>
+              <p className="mt-2 text-2xl font-black tracking-tight text-violet-950">
+                {config.maxBatch}
+              </p>
+              <p className="mt-1 text-[11px] text-violet-800/70">
+                สูงสุดต่อการ fund แบบ batch
+              </p>
+            </div>
+            <div
+              className={`rounded-2xl border p-4 ${isOwner ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}
             >
-              <ExternalLink size={12} className="inline text-blue-700" />
-            </a>
+              <div
+                className={`flex items-center justify-between ${isOwner ? "text-emerald-700" : "text-slate-600"}`}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                  Wallet role
+                </span>
+                <KeyRound size={17} />
+              </div>
+              <p
+                className={`mt-2 text-lg font-black tracking-tight ${isOwner ? "text-emerald-950" : "text-slate-900"}`}
+              >
+                {isOwner ? "OWNER VERIFIED" : "READ-ONLY"}
+              </p>
+              <p className="mt-1 truncate font-mono text-[11px] text-slate-600">
+                {short(config.owner)}
+              </p>
+            </div>
           </div>
-          <div className="rounded-lg bg-white p-3 font-mono">
-            Implementation: {short(config.implementation)}{" "}
-            <a
-              href={`${EXPLORER}/address/${config.implementation}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink size={12} className="inline text-blue-700" />
-            </a>
-          </div>
-          <div className="rounded-lg bg-white p-3 font-mono">
-            Owner: {short(config.owner)}
-          </div>
-          <div
-            className={`rounded-lg p-3 font-semibold ${isOwner ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"}`}
-          >
-            {isOwner
-              ? "Connected wallet is Owner"
-              : "Connected wallet is read-only"}
-          </div>
-          <div className="rounded-lg bg-white p-3">
-            Asset: <span className="font-mono">{short(config.asset)}</span> ·
-            Decimals: <b>{config.decimals}</b>
-          </div>
-          <div className="rounded-lg bg-white p-3">
-            Current fee: <b>{config.fee} BNB</b> · Deposit:{" "}
-            <b>{config.deposit}</b> · Max batch: <b>{config.maxBatch}</b>
+          <div className="grid gap-2 text-xs sm:grid-cols-2">
+            <div className="rounded-xl border border-violet-200 bg-white p-3 font-mono">
+              <span className="mr-2 font-sans font-bold text-slate-500">
+                Proxy
+              </span>
+              {proxy}{" "}
+              <a
+                href={`${EXPLORER}/address/${proxy}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={12} className="inline text-blue-700" />
+              </a>
+            </div>
+            <div className="rounded-xl border border-violet-200 bg-white p-3 font-mono">
+              <span className="mr-2 font-sans font-bold text-slate-500">
+                Implementation
+              </span>
+              {config.implementation}{" "}
+              <a
+                href={`${EXPLORER}/address/${config.implementation}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={12} className="inline text-blue-700" />
+              </a>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3 font-mono">
+              <span className="mr-2 font-sans font-bold text-slate-500">
+                Owner
+              </span>
+              {config.owner}
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3 font-mono">
+              <span className="mr-2 font-sans font-bold text-slate-500">
+                Fee wallet
+              </span>
+              {config.feeWallet}
+            </div>
           </div>
         </div>
       )}
@@ -336,7 +414,9 @@ export function UpgradeableOwnerPanel() {
           </div>
         </div>
       </div>
-      <p className="mt-3 text-xs text-slate-600">สถานะ: {status}</p>
+      <p className="mt-3 text-xs text-slate-600" aria-live="polite">
+        สถานะ: {status}
+      </p>
     </section>
   );
 }

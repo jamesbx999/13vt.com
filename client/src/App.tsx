@@ -9,12 +9,14 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { TransactionJournalProvider } from "./contexts/TransactionJournalContext";
 import Home from "./pages/Home";
 import OwnerDashboard from "./pages/OwnerDashboard";
+import AdminPage from "./pages/AdminPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/admin"} component={AdminPage} />
       <Route path={"/owner"} component={OwnerDashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
