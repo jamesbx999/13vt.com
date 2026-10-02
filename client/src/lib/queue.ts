@@ -120,6 +120,9 @@ export type TicketStatus = {
   claimed: boolean;
 };
 
+const MAX_REFERRAL_EVENTS = 5_000;
+const MAX_REBORN_EVENTS = 5_000;
+
 function tupleValue(value: any, name: string, index: number) {
   return value?.[name] ?? value?.[index] ?? 0;
 }
@@ -375,7 +378,7 @@ export async function readReferralPathEvents(
   );
   const selected = events
     .sort((a, b) => Number(a.blockNumber || 0) - Number(b.blockNumber || 0))
-    .slice(-50);
+    .slice(-MAX_REFERRAL_EVENTS);
   return Promise.all(
     selected.map(async event => {
       const block = await web3.eth
@@ -430,7 +433,7 @@ export async function readRebornEvents(
   });
   return events
     .sort((a, b) => Number(a.blockNumber || 0) - Number(b.blockNumber || 0))
-    .slice(-50)
+    .slice(-MAX_REBORN_EVENTS)
     .map(event => ({
       hash: String(event.transactionHash || ""),
       blockNumber: Number(event.blockNumber || 0),
