@@ -134,7 +134,8 @@ async function getPastEventsBounded(
 ) {
   const latest = Number(await web3.eth.getBlockNumber());
   const fromBlock = Math.max(0, latest - 200_000);
-  const step = 9_000;
+  // Keep a safety margin below common public-RPC eth_getLogs limits.
+  const step = 4_000;
   const events: any[] = [];
   for (let start = fromBlock; start <= latest; start += step) {
     const end = Math.min(latest, start + step - 1);
@@ -252,10 +253,7 @@ export async function readClaimHistory(
     QUEUE_ABI as any,
     contractAddress
   );
-  const events: any[] = await contract.getPastEvents("Claimed", {
-    fromBlock: 0,
-    toBlock: "latest",
-  });
+  const events: any[] = await getPastEventsBounded(web3, contract, "Claimed");
   return events
     .slice(-50)
     .reverse()
@@ -281,9 +279,9 @@ export async function readAdminHistory(
     contractAddress
   );
   const [registered, paused, unpaused] = await Promise.all([
-    contract.getPastEvents("Registered", { fromBlock: 0, toBlock: "latest" }),
-    contract.getPastEvents("PausedBy", { fromBlock: 0, toBlock: "latest" }),
-    contract.getPastEvents("UnpausedBy", { fromBlock: 0, toBlock: "latest" }),
+    getPastEventsBounded(web3, contract, "Registered"),
+    getPastEventsBounded(web3, contract, "PausedBy"),
+    getPastEventsBounded(web3, contract, "UnpausedBy"),
   ]);
   const adminRegistrations = registered.filter((event: any) => {
     const actor = String(tupleValue(event.returnValues, "registeredBy", 2));
