@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { UpgradeableOwnerPanel } from "@/components/UpgradeableOwnerPanel";
 import { BscScanVerificationPanel } from "@/components/BscScanVerificationPanel";
+import { AdminOperationsPanel } from "@/components/AdminOperationsPanel";
 
 const PROXY =
   import.meta.env.VITE_ONCHAIN_PROXY_ADDRESS ||
@@ -207,6 +208,8 @@ export default function AdminPage() {
         </div>
 
         <BscScanVerificationPanel />
+
+        <AdminOperationsPanel proxy={PROXY} />
 
         <p className="mt-5 text-center text-xs leading-5 text-slate-500">
           หน้านี้แสดงข้อมูลอ่านจากเชนโดยตรง ปุ่ม setter จะเปิดใช้งานเฉพาะเมื่อ
