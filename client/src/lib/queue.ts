@@ -777,17 +777,22 @@ export async function submitReferralRegistration(
   if (!isAddress(assetAddress)) throw new Error("Asset Token Address ไม่ถูกต้อง");
 
   const token: any = new web3.eth.Contract(ERC20_ABI as any, assetAddress);
-  onStep?.("approval", "wallet");
-  const approval: any = token.methods
-    .approve(contractAddress, depositAmount)
-    .send({ from: account });
-  approval.on("transactionHash", (hash: string) =>
-    onStep?.("approval", "hash", hash)
+  const currentAllowance = String(
+    await token.methods.allowance(account, contractAddress).call()
   );
-  const approvalReceipt = await approval;
-  onStep?.("approval", "receipt", approvalReceipt);
-  if (receiptOutcome(approvalReceipt) !== "confirmed")
-    throw new Error("Token approval ไม่ได้รับการยืนยันบนเชน; ไม่ส่ง Register ต่อ");
+  if (BigInt(currentAllowance) < BigInt(depositAmount)) {
+    onStep?.("approval", "wallet");
+    const approval: any = token.methods
+      .approve(contractAddress, depositAmount)
+      .send({ from: account });
+    approval.on("transactionHash", (hash: string) =>
+      onStep?.("approval", "hash", hash)
+    );
+    const approvalReceipt = await approval;
+    onStep?.("approval", "receipt", approvalReceipt);
+    if (receiptOutcome(approvalReceipt) !== "confirmed")
+      throw new Error("Token approval ไม่ได้รับการยืนยันบนเชน; ไม่ส่ง Register ต่อ");
+  }
 
   onStep?.("registration", "wallet");
   const registration: any = code
