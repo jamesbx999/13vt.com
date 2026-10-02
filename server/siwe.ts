@@ -6,6 +6,7 @@ import { ENV } from "./_core/env";
 
 export const SIWE_COOKIE_NAME = "onchain_siwe_session";
 export const SIWE_CHAIN_ID = 56;
+export const SIWE_SUPPORTED_CHAIN_IDS = [56, 97] as const;
 export const SIWE_TTL_MS = 30 * 60 * 1000;
 
 function secretKey() {
@@ -18,8 +19,13 @@ export function normalizeWalletAddress(address: string) {
   return address.toLowerCase();
 }
 
-export function buildSiweMessage(input: { domain: string; address: string; uri: string; nonce: string; issuedAt: Date; expiresAt: Date }) {
-  return `${input.domain} wants you to sign in with your Ethereum account:\n${input.address}\n\nSign in to Onchain Queue Dashboard.\n\nURI: ${input.uri}\nVersion: 1\nChain ID: ${SIWE_CHAIN_ID}\nNonce: ${input.nonce}\nIssued At: ${input.issuedAt.toISOString()}\nExpiration Time: ${input.expiresAt.toISOString()}`;
+export function buildSiweMessage(input: { domain: string; address: string; uri: string; nonce: string; issuedAt: Date; expiresAt: Date; chainId?: number }) {
+  const chainId = input.chainId ?? SIWE_CHAIN_ID;
+  return `${input.domain} wants you to sign in with your Ethereum account:\n${input.address}\n\nSign in to Onchain Queue Dashboard.\n\nURI: ${input.uri}\nVersion: 1\nChain ID: ${chainId}\nNonce: ${input.nonce}\nIssued At: ${input.issuedAt.toISOString()}\nExpiration Time: ${input.expiresAt.toISOString()}`;
+}
+
+export function isSupportedSiweChainId(chainId: number) {
+  return (SIWE_SUPPORTED_CHAIN_IDS as readonly number[]).includes(chainId);
 }
 
 export function parseSiweMessage(message: string) {

@@ -1,6 +1,6 @@
 # Transparent13VTQueue — Security Review (Testnet Candidate)
 
-สถานะ: **manual review ไม่ใช่ independent audit**
+สถานะ: **manual review ไม่ใช่ independent audit**; v2 แก้ mitigation ของ F-01/F-02/F-03 แล้ว แต่ต้อง fuzz/integration-test และ review อิสระก่อน Mainnet
 
 Scope: `deploy/remix/Transparent13VTQueue.sol`, deployed Testnet address `0x6575a3319271d1a2fc269b161ab57ed465103838`.
 
@@ -9,27 +9,27 @@ Scope: `deploy/remix/Transparent13VTQueue.sol`, deployed Testnet address `0x6575
 - `SafeERC20` และ `ReentrancyGuard` ใช้กับ external token/BNB calls ในทิศทางที่เหมาะสม
 - `claim()` commit state ก่อนโอน token และป้องกัน double claim
 - ไม่มี owner sweep, mint, hidden payout routing หรือ automatic Reborn
-- **ห้ามใช้ Mainnet/เงินจริง** ก่อนแก้/ยืนยัน findings ด้านล่างและทำ independent review
+- **ห้ามใช้ Mainnet/เงินจริง** ก่อนยืนยัน findings ที่เหลือและทำ independent review
 
 ## Findings
 
-### F-01 — High: Batch loop ใน `fundNext` เสี่ยง gas exhaustion / queue liveness
+### F-01 — High (mitigated in v2): Batch loop ใน `fundNext` เสี่ยง gas exhaustion / queue liveness
 
 `fundNext(amount, recipientCount)` loop ตั้งแต่ `firstTicketId` ถึง `lastTicketId` ใน transaction เดียว หาก `recipientCount` สูงเกิน block gas limit ธุรกรรมจะ revert ทั้งหมด ทำให้ส่วนท้ายของ queue ไม่สามารถถูกจัดสรรผ่าน batch นั้นได้ และผู้เรียกสามารถส่งค่า count ที่ทำให้ gas สูงมากได้
 
-**Remediation:** จำกัด `recipientCount` ด้วยค่าคงที่ที่ทดสอบแล้ว เช่น `MAX_FUND_TICKETS`; หรือเปลี่ยนเป็น cursor-based funding หลาย transaction และบันทึก reservation/amount ต่อ batch อย่างชัดเจน. เพิ่ม gas-bound tests.
+**v2 remediation:** จำกัด `recipientCount <= MAX_FUND_TICKETS` โดยค่าเริ่มต้น 50. ยังต้องทำ gas-bound tests และพิจารณา cursor-based fundingหาก batch 50 ยังสูงเกินไปกับ token ที่เลือก.
 
-### F-02 — High: `DEPOSIT_AMOUNT = 13 ether` ผูกกับ decimals 18 แบบ hard-code
+### F-02 — High (mitigated in v2): `DEPOSIT_AMOUNT` ผูกกับ decimals 18 แบบ hard-code
 
 ถ้า `asset_` มี decimals ไม่ใช่ 18 จำนวนที่รับจริงจะไม่ใช่ 13 token units ตามคำอธิบาย และอาจเกิดการฝาก/การจัดสรรผิดหน่วย
 
-**Remediation:** ตรวจ `decimals()` ใน constructor แล้วกำหนด `DEPOSIT_AMOUNT = 13 * 10**decimals` โดยมี upper bound หรือรับ `depositAmount` ที่ตรวจสอบและประกาศใน constructor; ห้ามใช้ token ที่มี fee-on-transfer/rebase. ควร emit asset decimals/config ใน deployment evidence.
+**v2 remediation:** อ่าน `decimals()` ใน constructor, ปฏิเสธค่าเกิน 18 และคำนวณ immutable `depositAmount = 13 * 10**assetDecimals`; ยังคงห้าม fee-on-transfer/rebase token.
 
-### F-03 — Medium: Constructor ไม่ตรวจว่า `asset_` เป็น contract และไม่มี decimals/config validation
+### F-03 — Medium (mitigated in v2): Constructor ไม่ตรวจว่า `asset_` เป็น contract และไม่มี decimals/config validation
 
 Address ที่ไม่ใช่ zero แต่เป็น EOA ผ่าน constructor ได้ แล้วธุรกรรมหลักจะ revert ภายหลังหรือทำงานไม่ตรง invariant.
 
-**Remediation:** ตรวจ `asset_.code.length > 0`; ตรวจ decimals และ behavior ด้วย deployment script/off-chain preflight; ใช้ immutable configuration ที่แสดงได้.
+**v2 remediation:** ตรวจ `asset_.code.length`, อ่าน decimals และเผยแพร่ `assetDecimals`/`depositAmount` เป็น immutable getters; ต้องทำ off-chain preflight ซ้ำก่อน deployment.
 
 ### F-04 — Medium: Fee wallet liveness ทำให้ `registerPosition` ล้มเหลวได้
 

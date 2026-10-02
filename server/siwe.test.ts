@@ -23,4 +23,10 @@ describe("SIWE message validation primitives", () => {
     const signed = account.sign(message);
     expect(new Web3().eth.accounts.recover(message, signed.signature).toLowerCase()).toBe(account.address.toLowerCase());
   });
+
+  it("binds the supported BSC Testnet chain to the SIWE message", () => {
+    const account = new Web3().eth.accounts.create();
+    const message = buildSiweMessage({ domain: "example.test", address: account.address, uri: "https://example.test/", nonce: "testnet-1", issuedAt: new Date("2026-09-23T10:00:00.000Z"), expiresAt: new Date("2026-09-23T10:30:00.000Z"), chainId: 97 });
+    expect(parseSiweMessage(message).chainId).toBe(97);
+  });
 });

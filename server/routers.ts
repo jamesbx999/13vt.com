@@ -18,7 +18,7 @@ import {
   makeNonce,
   normalizeWalletAddress,
   parseSiweMessage,
-  SIWE_CHAIN_ID,
+  isSupportedSiweChainId,
   SIWE_TTL_MS,
 } from "./siwe";
 import { getTestnetTokenInfo, inspectTestnetTransfer } from "./testnetToken";
@@ -71,8 +71,8 @@ export const appRouter = router({
             .number()
             .int()
             .refine(
-              value => value === SIWE_CHAIN_ID,
-              "Only BNB Smart Chain is supported"
+              value => isSupportedSiweChainId(value),
+              "Wallet sign-in supports BNB Smart Chain Mainnet (56) or Testnet (97)"
             ),
         })
       )
@@ -103,6 +103,7 @@ export const appRouter = router({
             nonce,
             issuedAt,
             expiresAt,
+            chainId: input.chainId,
           }),
           expiresAt: expiresAt.toISOString(),
         };
@@ -120,8 +121,8 @@ export const appRouter = router({
         const expectedAddress = normalizeWalletAddress(input.address);
         if (parsed.address !== expectedAddress)
           throw new Error("Wallet address does not match SIWE message");
-        if (parsed.chainId !== SIWE_CHAIN_ID)
-          throw new Error("Unsupported chain ID");
+        if (!isSupportedSiweChainId(parsed.chainId))
+          throw new Error("Unsupported BNB Smart Chain ID");
         if (
           parsed.expirationTime.getTime() <= Date.now() ||
           parsed.issuedAt.getTime() > Date.now() + 60_000
