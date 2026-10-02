@@ -19,14 +19,15 @@ import {
   Wallet,
 } from "lucide-react";
 
-const TESTNET_CHAIN_ID = BigInt(97);
-const RPC_URL = "https://bsc-testnet-rpc.publicnode.com";
-const EXPLORER = "https://testnet.bscscan.com";
+const MAINNET_CHAIN_ID = BigInt(56);
+const RPC_URL = "https://bsc-rpc.publicnode.com";
+const EXPLORER = "https://bscscan.com";
 const IMPLEMENTATION_SLOT =
   "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC";
 const DEFAULT_PROXY =
-  import.meta.env.VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS ||
-  "0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE";
+  import.meta.env.VITE_ONCHAIN_PROXY_ADDRESS ||
+  import.meta.env.VITE_MAINNET_UPGRADEABLE_PROXY_ADDRESS ||
+  "0x56ed01a6b08ac9ba88f9c88ee5c1455410b2cc06";
 const ABI = [
   "function owner() view returns (address)",
   "function asset() view returns (address)",
@@ -93,7 +94,7 @@ export function UpgradeableOwnerPanel({
   const [auditBusy, setAuditBusy] = useState(false);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditError, setAuditError] = useState("");
-  const readProvider = useMemo(() => new JsonRpcProvider(RPC_URL, 97), []);
+  const readProvider = useMemo(() => new JsonRpcProvider(RPC_URL, 56), []);
 
   function assertProxy() {
     if (!validAddress(proxy))
@@ -102,8 +103,8 @@ export function UpgradeableOwnerPanel({
   async function wallet() {
     if (!window.ethereum) throw new Error("ไม่พบ Wallet provider");
     const provider = new BrowserProvider(window.ethereum);
-    if ((await provider.getNetwork()).chainId !== TESTNET_CHAIN_ID)
-      throw new Error("กรุณาเปลี่ยนเป็น BSC Testnet (Chain ID 97)");
+    if ((await provider.getNetwork()).chainId !== MAINNET_CHAIN_ID)
+      throw new Error("กรุณาเปลี่ยนเป็น BSC Mainnet (Chain ID 56)");
     const signer = await provider.getSigner();
     const address = await signer.getAddress();
     setAccount(address);
@@ -268,7 +269,7 @@ export function UpgradeableOwnerPanel({
             Upgradeable Proxy · Transparency & Owner controls
           </h2>
           <p className="mt-1 text-xs leading-5 text-slate-600">
-            ตรวจสอบ Proxy, Implementation และ Owner บน BSC Testnet ก่อนเรียกใช้
+            ตรวจสอบ Proxy, Implementation และ Owner บน BSC Mainnet ก่อนเรียกใช้
             setter
           </p>
         </div>
@@ -500,7 +501,7 @@ export function UpgradeableOwnerPanel({
           Owner parameter controls
         </p>
         <p className="mt-1 text-[11px] text-slate-500">
-          ปุ่มด้านล่างส่งธุรกรรมจริงบน Testnet เฉพาะเมื่อ Wallet ปัจจุบันเป็น
+          ปุ่มด้านล่างส่งธุรกรรมจริงบน Mainnet เฉพาะเมื่อ Wallet ปัจจุบันเป็น
           Owner และผู้ใช้กดยืนยันเอง
         </p>
         <div className="mt-3 grid gap-2 md:grid-cols-3">

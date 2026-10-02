@@ -1,8 +1,12 @@
 # Transparent13VTQueue — Mainnet deployment package
 
+## Status
+
+Implementation and UUPS Proxy deployment succeeded on BSC Mainnet. See [`MAINNET-DEPLOYMENT-RECEIPT.md`](MAINNET-DEPLOYMENT-RECEIPT.md) for receipt links and read-only preflight results.
+
 ## Important
 
-This package is **prepared for deployment only**. It has not been deployed to BNB Smart Chain Mainnet by the agent. Deployment is a consequential on-chain action and must be reviewed and confirmed by the wallet owner in Remix/MetaMask.
+Deployment was performed by the wallet owner in Remix/MetaMask. Any later state-changing calls remain consequential and must be reviewed in the wallet before confirmation.
 
 ## Contract changes in this version
 

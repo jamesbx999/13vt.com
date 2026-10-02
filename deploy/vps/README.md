@@ -42,7 +42,7 @@ docker compose run --rm app pnpm exec drizzle-kit migrate
 docker compose up -d app proxy
 ```
 
-ทดสอบจากเครื่องเจ้าของหลังเปิด HTTPS: `curl -I https://YOUR_DOMAIN/`, ตรวจ `/manus-storage/13vt-logo_da29a501.jpg`, ตรวจ tRPC `/api/trpc/system.health?input=%7B%22json%22%3A%7B%22timestamp%22%3A0%7D%7D`, ทดลอง SIWE บนโดเมนจริงด้วย Wallet ที่มีสิทธิ์ แล้วตรวจการอ่าน DB และสิทธิ์ Admin. ตรวจ proxy log ด้วย `docker compose logs --tail=100 app proxy` และ **อย่าเผยแพร่ log ที่มีข้อมูลส่วนตัว**. ก่อนใช้จริงต้องตรวจ accessibility, chain ID = 56, Contract Address/ABI, และ testnet/การ audit สัญญาแยกต่างหาก
+ทดสอบจากเครื่องเจ้าของหลังเปิด HTTPS: `curl -I https://YOUR_DOMAIN/`, ตรวจ `/manus-storage/13vt-logo_da29a501.jpg`, ตรวจ tRPC `/api/trpc/system.health?input=%7B%22json%22%3A%7B%22timestamp%22%3A0%7D%7D`, ทดลอง SIWE บนโดเมนจริงด้วย Wallet ที่มีสิทธิ์ แล้วตรวจการอ่าน DB และสิทธิ์ Admin. หน้า Dashboard และ `/admin` ใช้ BSC Mainnet Proxy `0x56ed01a6b08ac9ba88f9c88ee5c1455410b2cc06`; ตรวจ proxy log ด้วย `docker compose logs --tail=100 app proxy` และ **อย่าเผยแพร่ log ที่มีข้อมูลส่วนตัว**. ก่อนใช้จริงต้องตรวจ accessibility, chain ID = 56, Contract Address/ABI, และ testnet/การ audit สัญญาแยกต่างหาก
 
 ### อัปเดต/ย้อนกลับ
 

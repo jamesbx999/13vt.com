@@ -12,10 +12,11 @@ import { Link } from "wouter";
 import { UpgradeableOwnerPanel } from "@/components/UpgradeableOwnerPanel";
 
 const PROXY =
-  import.meta.env.VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS ||
-  "0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE";
-const EXPLORER = "https://testnet.bscscan.com";
-const RPC_URL = "https://bsc-testnet-rpc.publicnode.com";
+  import.meta.env.VITE_ONCHAIN_PROXY_ADDRESS ||
+  import.meta.env.VITE_MAINNET_UPGRADEABLE_PROXY_ADDRESS ||
+  "0x56ed01a6b08ac9ba88f9c88ee5c1455410b2cc06";
+const EXPLORER = "https://bscscan.com";
+const RPC_URL = "https://bsc-rpc.publicnode.com";
 const OWNER_ABI = ["function owner() view returns (address)"];
 
 declare global {
@@ -33,7 +34,7 @@ export default function AdminPage() {
   const [message, setMessage] = useState(
     "เชื่อมต่อ Wallet Owner เพื่อยืนยันสิทธิ์"
   );
-  const readProvider = new JsonRpcProvider(RPC_URL, 97);
+  const readProvider = new JsonRpcProvider(RPC_URL, 56);
 
   async function verifyOwner() {
     try {
@@ -41,9 +42,9 @@ export default function AdminPage() {
         throw new Error("ไม่พบ MetaMask หรือ Wallet provider");
       setState("checking");
       const provider = new BrowserProvider(window.ethereum);
-      if ((await provider.getNetwork()).chainId !== BigInt(97)) {
+      if ((await provider.getNetwork()).chainId !== BigInt(56)) {
         throw new Error(
-          "กรุณาเปลี่ยน Wallet เป็น BNB Smart Chain Testnet (Chain ID 97)"
+          "กรุณาเปลี่ยน Wallet เป็น BNB Smart Chain Mainnet (Chain ID 56)"
         );
       }
       const signer = await provider.getSigner();
@@ -143,14 +144,14 @@ export default function AdminPage() {
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">
-                  <LockKeyhole size={15} /> Private owner area · Testnet
+                  <LockKeyhole size={15} /> Private owner area · Mainnet
                 </div>
                 <h1 className="max-w-3xl text-3xl font-bold tracking-tight sm:text-5xl">
                   Protocol administration
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
                   ตรวจสอบ Proxy, Implementation, Owner และค่าพารามิเตอร์ของสัญญา
-                  ก่อนส่งคำสั่งเปลี่ยนแปลงใด ๆ บน BNB Smart Chain Testnet
+                  ก่อนส่งคำสั่งเปลี่ยนแปลงใด ๆ บน BNB Smart Chain Mainnet
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
@@ -186,7 +187,7 @@ export default function AdminPage() {
                 Network
               </p>
               <p className="mt-1 text-sm font-bold">
-                BNB Smart Chain · Chain ID 97
+                BNB Smart Chain · Chain ID 56
               </p>
             </div>
             <div className="border-t border-white/10 p-4 sm:border-l sm:border-t-0 sm:p-5">
