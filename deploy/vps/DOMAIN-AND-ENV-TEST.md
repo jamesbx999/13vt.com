@@ -41,6 +41,7 @@ JWT_SECRET=<hex-64-characters-generated-locally>
 ONCHAIN_OWNER_WALLET=0x<40-hex-character-address-you-control>
 BSCSCAN_API_KEY=<server-only-Etherscan-API-v2-key>
 MAINNET_UPGRADEABLE_PROXY_ADDRESS=0x56ed01a6b08ac9ba88f9c88ee5c1455410b2cc06
+MAINNET_IMPLEMENTATION_ADDRESS=0x12c7726db573416ecb36c42462955ff39786958b
 TESTNET_UPGRADEABLE_PROXY_ADDRESS=0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE
 ```
 
@@ -49,6 +50,7 @@ TESTNET_UPGRADEABLE_PROXY_ADDRESS=0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE
 - `JWT_SECRET` เซ็น session; เปลี่ยนค่าแล้ว session เดิมใช้ไม่ได้. `ONCHAIN_OWNER_WALLET` คือกระเป๋าที่ควบคุมจริงและจะใช้ลงลายเซ็น SIWE (ไม่ใช่คีย์ส่วนตัว). ค่านี้เป็น **address สาธารณะ** ที่ส่งเป็น `VITE_ONCHAIN_OWNER_WALLET` ระหว่าง build เว็บ และเป็นค่า backend runtime; เปลี่ยน address แล้วต้อง `docker compose build app && docker compose up -d app` เพื่อให้หน้าเว็บตรงกับ backend
 - `BSCSCAN_API_KEY` เป็น secret ฝั่ง server สำหรับ Etherscan API V2; ห้ามส่งเข้า Vite/build args หรือใส่ใน source code. Endpoint Verify ใน `/admin` จะเรียกได้หลัง Owner ผ่าน SIWE session แล้วเท่านั้น
 - `MAINNET_UPGRADEABLE_PROXY_ADDRESS` เป็น Proxy ที่ใช้จริงบน BSC Mainnet (Chain ID 56) สำหรับ Dashboard และ `/admin`; ค่า deploy ปัจจุบันคือ `0x56ed01a6b08ac9ba88f9c88ee5c1455410b2cc06` และ Compose จะส่งค่าเป็น `VITE_ONCHAIN_PROXY_ADDRESS`, `VITE_ONCHAIN_QUEUE_ADDRESS` และ `VITE_MAINNET_UPGRADEABLE_PROXY_ADDRESS`
+- `MAINNET_IMPLEMENTATION_ADDRESS` เป็น Implementation ที่ Proxy ใช้งานอยู่ปัจจุบันและ Verify แบบ Exact Match แล้ว: `0x12c7726db573416ecb36c42462955ff39786958b`; Compose จะส่งค่าเป็น `VITE_ONCHAIN_IMPLEMENTATION_ADDRESS` สำหรับหน้า Verify ของ Admin
 - `TESTNET_UPGRADEABLE_PROXY_ADDRESS` เป็น address สาธารณะของ UUPS Proxy บน BSC Testnet; Compose จะส่งค่าเดียวกันเป็น `VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS` และ `VITE_TESTNET_QUEUE_ADDRESS` ระหว่าง build. ค่าอ้างอิงที่ตรวจแล้วปัจจุบันคือ `0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE`; ห้ามใส่ private key หรือ address ของ Implementation แทน Proxy
 - ห้ามเก็บ seed phrase, private key, token API หรือ `.env` ใน GitHub/แชต; ให้เก็บ backup ความลับภายนอกรีโปโดยสิทธิ์จำกัด. `.env` ไม่ถูก track โดย `.gitignore` และถูกตัดออกจาก Docker build context
 - ตรวจค่าโดยไม่แสดงความลับ: `python3 check-env.py .env`; หาก parser แจ้งข้อผิดพลาด ให้แก้ก่อน. `docker compose config --quiet` ตรวจไวยากรณ์โดยไม่พิมพ์ค่าที่ interpolate; **อย่าใช้ `docker compose config` โดยไม่ใส่ `--quiet` แล้วแชร์ผล**

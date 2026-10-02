@@ -3,7 +3,7 @@ import { CheckCircle2, ExternalLink, KeyRound, Loader2, ShieldCheck, UploadCloud
 import { trpc } from "@/lib/trpc";
 
 const PROXY = import.meta.env.VITE_ONCHAIN_PROXY_ADDRESS || import.meta.env.VITE_MAINNET_UPGRADEABLE_PROXY_ADDRESS || "0x56ed01a6b08ac9ba88f9c88ee5c1455410b2cc06";
-const IMPLEMENTATION = import.meta.env.VITE_ONCHAIN_IMPLEMENTATION_ADDRESS || "0x3A5aBCb54BB8f42Ab0fe4dA1D81DD63B2B02d9b9";
+const IMPLEMENTATION = import.meta.env.VITE_ONCHAIN_IMPLEMENTATION_ADDRESS || "0x12c7726db573416ecb36c42462955ff39786958b";
 const EXPLORER = "https://bscscan.com";
 
 declare global { interface Window { ethereum?: any } }
@@ -14,7 +14,7 @@ function Field({ label, value, onChange, placeholder, mono = false }: { label: s
 
 export function BscScanVerificationPanel() {
   const [sourceCode, setSourceCode] = useState("");
-  const [contractName, setContractName] = useState("Transparent13VTQueueUpgradeable");
+  const [contractName, setContractName] = useState("Transparent13VTQueueUpgradeableReferral");
   const [compilerVersion, setCompilerVersion] = useState("v0.8.24+commit.e11b9ed9");
   const [optimizationUsed, setOptimizationUsed] = useState("1" as "0" | "1");
   const [runs, setRuns] = useState("200");
