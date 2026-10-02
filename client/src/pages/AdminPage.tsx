@@ -12,6 +12,8 @@ import { Link } from "wouter";
 import { UpgradeableOwnerPanel } from "@/components/UpgradeableOwnerPanel";
 import { BscScanVerificationPanel } from "@/components/BscScanVerificationPanel";
 import { AdminOperationsPanel } from "@/components/AdminOperationsPanel";
+import { ContractStatusCard } from "@/components/ContractStatusCard";
+import { readReferralStatus, type ReferralStatus } from "@/lib/queue";
 
 const PROXY =
   import.meta.env.VITE_ONCHAIN_PROXY_ADDRESS ||
@@ -36,6 +38,8 @@ export default function AdminPage() {
   const [message, setMessage] = useState(
     "เชื่อมต่อ Wallet Owner เพื่อยืนยันสิทธิ์"
   );
+  const [contractStatus, setContractStatus] = useState<ReferralStatus | null>(null);
+  const [contractStatusError, setContractStatusError] = useState("");
   const readProvider = new JsonRpcProvider(RPC_URL, 56);
 
   async function verifyOwner() {
@@ -83,6 +87,27 @@ export default function AdminPage() {
     return () =>
       window.ethereum?.removeListener?.("accountsChanged", onAccountsChanged);
   }, []);
+
+  useEffect(() => {
+    if (state !== "granted" || !window.ethereum || !account) return;
+    let cancelled = false;
+    setContractStatusError("");
+    void readReferralStatus(window.ethereum, PROXY, account, owner || account)
+      .then(status => {
+        if (!cancelled) setContractStatus(status);
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setContractStatus(null);
+          setContractStatusError(
+            error instanceof Error ? error.message : "อ่านสถานะ Contract ไม่สำเร็จ"
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [account, owner, state]);
 
   if (state !== "granted") {
     const denied = state === "denied";
@@ -202,6 +227,14 @@ export default function AdminPage() {
             </div>
           </div>
         </header>
+
+        <div className="mt-6">
+          <ContractStatusCard
+            status={contractStatus}
+            ownerAddress={owner || PROXY}
+            error={contractStatusError}
+          />
+        </div>
 
         <div className="mt-6">
           <UpgradeableOwnerPanel verifiedAccount={account} />
