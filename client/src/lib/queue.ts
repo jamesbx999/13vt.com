@@ -2,7 +2,11 @@ import Web3 from "web3";
 import { receiptOutcome } from "./transactionJournal";
 
 export const BSC_CHAIN_ID = 56;
-export const DEFAULT_CONTRACT_ADDRESS = "";
+export const DEFAULT_CONTRACT_ADDRESS =
+  import.meta.env.VITE_ONCHAIN_QUEUE_ADDRESS ||
+  import.meta.env.VITE_ONCHAIN_PROXY_ADDRESS ||
+  import.meta.env.VITE_MAINNET_UPGRADEABLE_PROXY_ADDRESS ||
+  "0x56ed01a6b08ac9ba88f9c88ee5c1455410B2cC06";
 
 export const QUEUE_ABI = [
   {
@@ -30,6 +34,20 @@ export const QUEUE_ABI = [
     inputs: [],
     name: "asset",
     outputs: [{ type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "depositAmount",
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "serviceFeeWei",
+    outputs: [{ type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
@@ -733,12 +751,17 @@ export function referralCodeToBytes32(code: string) {
   return Web3.utils.asciiToHex(normalized).padEnd(66, "0");
 }
 
-export function submitReferralRegistration(
+export async function submitReferralRegistration(
   provider: any,
   contractAddress: string,
   account: string,
   referrer: string,
-  code = ""
+  code = "",
+  onStep?: (
+    step: "approval" | "registration",
+    stage: "wallet" | "hash" | "receipt",
+    value?: unknown
+  ) => void
 ) {
   if (!provider) throw new Error("ไม่พบ MetaMask หรือ EIP-1193 provider");
   if (!isAddress(contractAddress) || !isAddress(account))
@@ -748,14 +771,41 @@ export function submitReferralRegistration(
     QUEUE_ABI as any,
     contractAddress
   );
-  if (code)
-    return contract.methods
-      .registerWithReferralCode(referralCodeToBytes32(code))
-      .send({ from: account });
-  if (!isAddress(referrer)) throw new Error("Referrer Address ไม่ถูกต้อง");
-  return contract.methods
-    .registerWithReferral(referrer)
+  const assetAddress = String(await contract.methods.asset().call());
+  const depositAmount = String(await contract.methods.depositAmount().call());
+  const serviceFeeWei = String(await contract.methods.serviceFeeWei().call());
+  if (!isAddress(assetAddress)) throw new Error("Asset Token Address ไม่ถูกต้อง");
+
+  const token: any = new web3.eth.Contract(ERC20_ABI as any, assetAddress);
+  onStep?.("approval", "wallet");
+  const approval: any = token.methods
+    .approve(contractAddress, depositAmount)
     .send({ from: account });
+  approval.on("transactionHash", (hash: string) =>
+    onStep?.("approval", "hash", hash)
+  );
+  const approvalReceipt = await approval;
+  onStep?.("approval", "receipt", approvalReceipt);
+  if (receiptOutcome(approvalReceipt) !== "confirmed")
+    throw new Error("Token approval ไม่ได้รับการยืนยันบนเชน; ไม่ส่ง Register ต่อ");
+
+  onStep?.("registration", "wallet");
+  const registration: any = code
+    ? contract.methods
+        .registerWithReferralCode(referralCodeToBytes32(code))
+        .send({ from: account, value: serviceFeeWei })
+    : (() => {
+        if (!isAddress(referrer)) throw new Error("Referrer Address ไม่ถูกต้อง");
+        return contract.methods
+          .registerWithReferral(referrer)
+          .send({ from: account, value: serviceFeeWei });
+      })();
+  registration.on("transactionHash", (hash: string) =>
+    onStep?.("registration", "hash", hash)
+  );
+  const registrationReceipt = await registration;
+  onStep?.("registration", "receipt", registrationReceipt);
+  return registrationReceipt;
 }
 
 export function submitSetReferralCode(

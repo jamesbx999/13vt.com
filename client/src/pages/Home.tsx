@@ -821,19 +821,26 @@ export default function Home() {
     });
     try {
       await assertBscWriteNetwork(provider);
-      const transaction: any = submitReferralRegistration(
+      const receipt = await submitReferralRegistration(
         provider,
         contractAddress,
         account,
         SUGGESTED_REFERRER,
-        referralCode
+        referralCode,
+        (step, stage, value) => {
+          if (stage === "hash" && typeof value === "string") {
+            broadcastHash = value;
+            setRegistrationHash(value);
+            journal.sent(trackingId, value);
+            toast.info(
+              step === "approval"
+                ? "Approve USDT สำเร็จ กำลังเตรียม Register"
+                : "Register อยู่ระหว่างยืนยันบน BSC Mainnet",
+              { description: shortAddress(value) }
+            );
+          }
+        }
       );
-      transaction.on("transactionHash", (hash: string) => {
-        broadcastHash = hash;
-        setRegistrationHash(hash);
-        journal.sent(trackingId, hash);
-      });
-      const receipt = await transaction;
       minedOutcome = receiptOutcome(receipt);
       journal.receipt(trackingId, receipt);
       if (minedOutcome !== "confirmed")
