@@ -4,6 +4,7 @@ import { AlertTriangle, Bell, CheckCircle2, ChevronLeft, ChevronRight, Clock3, L
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const TESTNET_RPC = "https://bsc-testnet-dataseed.bnbchain.org";
+const DEFAULT_TESTNET_QUEUE_ADDRESS = import.meta.env.VITE_TESTNET_QUEUE_ADDRESS || "";
 const MAX_ROWS = 50;
 const MAX_EVENTS = 300;
 const EVENTS_PER_PAGE = 10;
@@ -17,22 +18,24 @@ const ABI = [
 ] as const;
 
 type Position = { id: number; recipient: string; amount: string; claimed: boolean };
-type QueueEvent = { key: string; name: string; kind: string; block: number; tx: string; detail: string };
+type QueueEvent = { key: string; name: string; kind: string; block: number; tx: string; detail: string; wallets: string[] };
 type Copy = Record<string, string>;
-const en: Copy = { title: "FIFO queue dashboard", subtitle: "Read-only view of Transparent13VTQueue on BSC Testnet (97).", address: "Deployed queue contract address", load: "Read queue", loading: "Reading queue…", readOnly: "READ-ONLY", registered: "Registered", waiting: "Waiting allocation", scheduled: "Scheduled", claimed: "Claimed", balance: "Contract balance", positions: "Positions awaiting funding", unfunded: "UNFUNDED", rebornStatus: "REBORN", recipient: "Recipient", amount: "Allocated", empty: "No positions returned", invalid: "Enter a valid contract address.", error: "Could not read this contract. Check address, network and ABI.", cap: "Showing the first 50 tickets and up to 300 events to keep RPC reads bounded.", noBroadcast: "No transaction is sent.", history: "Live event history", noEvents: "No matching events in the recent range", payment: "13-token payment", reborn: "Reborn", registeredEvent: "Position registered", funding: "FIFO funding scheduled", live: "Auto-refresh every 15 seconds", lastBlock: "Block", evidence: "Only emitted events are evidence; no Reborn state is inferred.", newPayment: "A Position received a successful payment.", previous: "Previous", next: "Next", page: "Page", of: "of", refreshing: "Refreshing on-chain data…" };
-const th: Partial<Copy> = { title: "แดชบอร์ดคิว FIFO", subtitle: "อ่านสถานะ Transparent13VTQueue บน BSC Testnet (97) แบบ Read-only", address: "ที่อยู่ Queue Contract ที่ Deploy แล้ว", load: "อ่านคิว", loading: "กำลังอ่านคิว…", readOnly: "อ่านอย่างเดียว", registered: "ลงทะเบียน", waiting: "รอการจัดสรร", scheduled: "จัดสรรแล้ว", claimed: "Claim แล้ว", balance: "ยอดใน Contract", positions: "Position ที่ยังไม่ได้รับทุน", unfunded: "UNFUNDED", rebornStatus: "REBORN", recipient: "ผู้รับ", amount: "ยอดจัดสรร", empty: "ไม่พบ Position", invalid: "กรุณาใส่ที่อยู่ Contract ให้ถูกต้อง", error: "อ่าน Contract ไม่ได้ กรุณาตรวจ address, network และ ABI", noBroadcast: "ไม่มีการส่งธุรกรรม", history: "ประวัติ Event แบบเรียลไทม์", noEvents: "ไม่พบ Event ที่ตรงกัน", payment: "การจ่าย 13 Token", reborn: "Reborn", registeredEvent: "สร้าง Position", funding: "จัดสรรทุนตาม FIFO", live: "รีเฟรชอัตโนมัติทุก 15 วินาที", lastBlock: "Block", newPayment: "มี Position ได้รับเงินสำเร็จ", previous: "ก่อนหน้า", next: "ถัดไป", page: "หน้า", of: "จาก", refreshing: "กำลังรีเฟรชข้อมูลบนเชน…" };
+const en: Copy = { title: "FIFO queue dashboard", subtitle: "Read-only view of Transparent13VTQueue on BSC Testnet (97).", address: "Deployed queue contract address", load: "Read queue", loading: "Reading queue…", readOnly: "READ-ONLY", registered: "Registered", waiting: "Waiting allocation", scheduled: "Scheduled", claimed: "Claimed", balance: "Contract balance", positions: "Positions awaiting funding", unfunded: "UNFUNDED", rebornStatus: "REBORN", recipient: "Recipient", amount: "Allocated", empty: "No positions returned", invalid: "Enter a valid contract address.", error: "Could not read this contract. Check address, network and ABI.", cap: "Showing the first 50 tickets and up to 300 events to keep RPC reads bounded.", noBroadcast: "No transaction is sent.", history: "Live event history", noEvents: "No matching events in the recent range", payment: "13-token payment", reborn: "Reborn", registeredEvent: "Position registered", funding: "FIFO funding scheduled", live: "Auto-refresh every 15 seconds", lastBlock: "Block", evidence: "Only emitted events are evidence; no Reborn state is inferred.", newPayment: "A Position received a successful payment.", previous: "Previous", next: "Next", page: "Page", of: "of", refreshing: "Refreshing on-chain data…", filterType: "Event type", filterWallet: "Wallet address", allEvents: "All events", clearFilters: "Clear filters", matched: "matching events" };
+const th: Partial<Copy> = { title: "แดชบอร์ดคิว FIFO", subtitle: "อ่านสถานะ Transparent13VTQueue บน BSC Testnet (97) แบบ Read-only", address: "ที่อยู่ Queue Contract ที่ Deploy แล้ว", load: "อ่านคิว", loading: "กำลังอ่านคิว…", readOnly: "อ่านอย่างเดียว", registered: "ลงทะเบียน", waiting: "รอการจัดสรร", scheduled: "จัดสรรแล้ว", claimed: "Claim แล้ว", balance: "ยอดใน Contract", positions: "Position ที่ยังไม่ได้รับทุน", unfunded: "UNFUNDED", rebornStatus: "REBORN", recipient: "ผู้รับ", amount: "ยอดจัดสรร", empty: "ไม่พบ Position", invalid: "กรุณาใส่ที่อยู่ Contract ให้ถูกต้อง", error: "อ่าน Contract ไม่ได้ กรุณาตรวจ address, network และ ABI", noBroadcast: "ไม่มีการส่งธุรกรรม", history: "ประวัติ Event แบบเรียลไทม์", noEvents: "ไม่พบ Event ที่ตรงกัน", payment: "การจ่าย 13 Token", reborn: "Reborn", registeredEvent: "สร้าง Position", funding: "จัดสรรทุนตาม FIFO", live: "รีเฟรชอัตโนมัติทุก 15 วินาที", lastBlock: "Block", newPayment: "มี Position ได้รับเงินสำเร็จ", previous: "ก่อนหน้า", next: "ถัดไป", page: "หน้า", of: "จาก", refreshing: "กำลังรีเฟรชข้อมูลบนเชน…", filterType: "ประเภท Event", filterWallet: "Wallet Address", allEvents: "ทุก Event", clearFilters: "ล้างตัวกรอง", matched: "รายการที่ตรงกัน" };
 const copy: Record<string, Partial<Copy>> = { th, de: { title: "FIFO-Warteschlange", history: "Live-Eventverlauf", rebornStatus: "REBORN", previous: "Zurück", next: "Weiter", page: "Seite", of: "von" }, zh: { title: "FIFO 队列面板", history: "实时事件历史", rebornStatus: "REBORN", previous: "上一页", next: "下一页", page: "第", of: "页" }, lo: { title: "Dashboard ຄິວ FIFO", history: "ປະຫວັດ Event ແບບສົດ", rebornStatus: "REBORN", previous: "ກ່ອນ", next: "ຕໍ່ໄປ", page: "ໜ້າ", of: "ຈາກ" } };
 
 export function FifoQueueDashboard() {
   const { language } = useLanguage();
   const text = { ...en, ...(copy[language] || {}) } as Copy;
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(DEFAULT_TESTNET_QUEUE_ADDRESS);
   const [loadedAddress, setLoadedAddress] = useState("");
   const [state, setState] = useState<number[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [events, setEvents] = useState<QueueEvent[]>([]);
   const [rebornIds, setRebornIds] = useState<number[]>([]);
   const [eventPage, setEventPage] = useState(1);
+  const [eventType, setEventType] = useState("all");
+  const [walletFilter, setWalletFilter] = useState("");
   const [status, setStatus] = useState("");
   const [notification, setNotification] = useState("");
   const [busy, setBusy] = useState(false);
@@ -61,7 +64,8 @@ export function FifoQueueDashboard() {
         const amount = values.amount ?? values.tokenAmount ?? values.amountPerTicket;
         const kind = name === "Claimed" ? text.payment : name === "Reborn" ? text.reborn : name === "Registered" ? text.registeredEvent : name === "RevenueScheduled" ? text.funding : name;
         const detail = name === "Claimed" ? `#${values.ticketId ?? "?"} · ${amount ? Web3.utils.fromWei(String(amount), "ether") : "13"} token` : name === "Reborn" ? `#${values.parentId ?? "?"} → #${values.successorId ?? "?"}` : name === "RevenueScheduled" ? `#${values.firstTicketId ?? "?"}–#${values.lastTicketId ?? "?"}` : `#${values.ticketId ?? "?"}`;
-        return { key, name, kind, block: Number(event.blockNumber), tx: event.transactionHash, detail };
+        const wallets = [values.payer, values.recipient, values.funder].filter((wallet): wallet is string => typeof wallet === "string" && Web3.utils.isAddress(wallet));
+        return { key, name, kind, block: Number(event.blockNumber), tx: event.transactionHash, detail, wallets };
       });
       const oldKeys = previousEventKeys.current;
       if (oldKeys && history.some(event => event.name === "Claimed" && !oldKeys.has(event.key))) setNotification(text.newPayment);
@@ -78,8 +82,10 @@ export function FifoQueueDashboard() {
   useEffect(() => { if (!notification) return; const timer = window.setTimeout(() => setNotification(""), 8_000); return () => window.clearTimeout(timer); }, [notification]);
 
   const metrics = [text.registered, text.waiting, text.scheduled, text.claimed, text.balance];
-  const totalPages = Math.max(1, Math.ceil(events.length / EVENTS_PER_PAGE));
-  const pageEvents = events.slice((eventPage - 1) * EVENTS_PER_PAGE, eventPage * EVENTS_PER_PAGE);
+  const filteredEvents = events.filter(event => (eventType === "all" || event.name === eventType) && (!walletFilter.trim() || event.wallets.some(wallet => wallet.toLowerCase() === walletFilter.trim().toLowerCase())));
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / EVENTS_PER_PAGE));
+  const safePage = Math.min(eventPage, totalPages);
+  const pageEvents = filteredEvents.slice((safePage - 1) * EVENTS_PER_PAGE, safePage * EVENTS_PER_PAGE);
   return <section aria-label={text.title} aria-busy={busy} className="relative rounded-2xl border border-blue-200 bg-white p-5 shadow-sm sm:p-6">
     {busy && <div className="absolute inset-x-0 top-0 h-1 overflow-hidden rounded-t-2xl bg-blue-100"><div className="h-full w-1/3 animate-[loading_1.2s_ease-in-out_infinite] rounded-full bg-blue-600 motion-reduce:animate-none" /></div>}
     {notification && <div role="alert" className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-900"><Bell size={16} className="animate-pulse motion-reduce:animate-none" />{notification}</div>}
@@ -91,10 +97,18 @@ export function FifoQueueDashboard() {
     <div className="mt-5 flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-slate-900">{text.positions}</h3><span className="text-xs text-slate-500">{positions.length}</span></div>
     {positions.length === 0 && state.length === 5 && <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">{text.empty}</p>}
     {positions.length > 0 && <div className="mt-3 overflow-x-auto rounded-xl border border-slate-100"><table className="w-full min-w-[36rem] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-3 py-2">ID</th><th className="px-3 py-2">{text.recipient}</th><th className="px-3 py-2">{text.amount}</th><th className="px-3 py-2">Status</th></tr></thead><tbody>{positions.map(row => <tr key={row.id} className="border-t border-slate-100"><td className="px-3 py-2 font-mono">#{row.id}</td><td className="px-3 py-2 font-mono">{row.recipient}</td><td className="px-3 py-2">{row.amount}</td><td className="px-3 py-2"><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 font-semibold ${rebornIds.includes(row.id) ? "bg-violet-50 text-violet-800" : "bg-amber-50 text-amber-800"}`}>{rebornIds.includes(row.id) ? <Sparkles size={12} /> : <CheckCircle2 size={12} />} {rebornIds.includes(row.id) ? text.rebornStatus : text.unfunded}</span></td></tr>)}</tbody></table></div>}
-    <div className="mt-6 flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-slate-900"><Clock3 size={15} className="mr-1 inline" />{text.history}</h3><span className="text-[11px] text-emerald-700">{loadedAddress ? text.live : ""}</span></div>
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3"><h3 className="text-sm font-bold text-slate-900"><Clock3 size={15} className="mr-1 inline" />{text.history}</h3><span className="text-[11px] text-emerald-700">{loadedAddress ? text.live : ""}</span></div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-[12rem_1fr_auto]">
+      <select aria-label={text.filterType} value={eventType} onChange={event => { setEventType(event.target.value); setEventPage(1); }} className="rounded-xl border border-slate-200 px-3 py-2 text-xs">
+        <option value="all">{text.allEvents}</option><option value="Registered">Registered</option><option value="RevenueScheduled">RevenueScheduled</option><option value="Claimed">Claimed</option><option value="Reborn">Reborn</option>
+      </select>
+      <input aria-label={text.filterWallet} value={walletFilter} onChange={event => { setWalletFilter(event.target.value); setEventPage(1); }} placeholder={text.filterWallet} className="rounded-xl border border-slate-200 px-3 py-2 font-mono text-xs" />
+      <button type="button" onClick={() => { setEventType("all"); setWalletFilter(""); setEventPage(1); }} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold">{text.clearFilters}</button>
+    </div>
+    <p className="mt-2 text-[11px] text-slate-500">{filteredEvents.length} {text.matched}</p>
     {pageEvents.length === 0 && state.length === 5 && <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">{text.noEvents}</p>}
     {pageEvents.length > 0 && <div className="mt-3 space-y-2">{pageEvents.map(event => <div key={event.key} className={`rounded-xl border p-3 text-xs ${event.name === "Reborn" ? "border-violet-200 bg-violet-50" : event.name === "Claimed" ? "border-emerald-200 bg-emerald-50" : "border-slate-100 bg-slate-50"}`}><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold text-slate-900">{event.name === "Reborn" && <Sparkles size={13} className="mr-1 inline text-violet-700" />}{event.kind}</span><span className="font-mono text-slate-500">{text.lastBlock} {event.block}</span></div><p className="mt-1 text-slate-700">{event.detail}</p><a className="mt-1 block break-all font-mono text-[10px] text-blue-700 underline" href={`https://testnet.bscscan.com/tx/${event.tx}`} target="_blank" rel="noreferrer">{event.tx}</a></div>)}</div>}
-    {events.length > EVENTS_PER_PAGE && <div className="mt-4 flex items-center justify-center gap-3"><button type="button" disabled={eventPage <= 1} onClick={() => setEventPage(page => page - 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-40" aria-label={text.previous}><ChevronLeft size={15} /></button><span className="text-xs text-slate-600">{text.page} {eventPage} {text.of} {totalPages}</span><button type="button" disabled={eventPage >= totalPages} onClick={() => setEventPage(page => page + 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-40" aria-label={text.next}><ChevronRight size={15} /></button></div>}
+    {filteredEvents.length > EVENTS_PER_PAGE && <div className="mt-4 flex items-center justify-center gap-3"><button type="button" disabled={safePage <= 1} onClick={() => setEventPage(page => page - 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-40" aria-label={text.previous}><ChevronLeft size={15} /></button><span className="text-xs text-slate-600">{text.page} {safePage} {text.of} {totalPages}</span><button type="button" disabled={safePage >= totalPages} onClick={() => setEventPage(page => page + 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-40" aria-label={text.next}><ChevronRight size={15} /></button></div>}
     <p className="mt-4 text-xs text-slate-500">{text.cap} {text.noBroadcast} {text.evidence}</p>
   </section>;
 }

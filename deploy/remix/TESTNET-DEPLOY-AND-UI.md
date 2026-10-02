@@ -17,6 +17,7 @@
 5. ตรวจ gas และ constructor arguments จาก Remix; ยืนยัน deploy จาก wallet ของคุณเอง
 6. รอ receipt สำเร็จ แล้วบันทึก contract address และ transaction hash
 7. ตรวจ address บน `testnet.bscscan.com` และตรวจ bytecode/ABI ให้ตรงกับ source
+8. ตั้งค่า `VITE_TESTNET_QUEUE_ADDRESS=<address ที่มี receipt แล้ว>` ใน environment ของ frontend แล้ว rebuild; หากไม่ตั้งค่า ผู้ใช้ยังป้อน address ใน Dashboard ได้เอง
 
 ห้ามใช้ owner wallet เป็น token address และห้ามใช้ BSC Mainnet ในขั้นตอนนี้
 
@@ -30,6 +31,8 @@
    - `tickets(id)` สำหรับ Position สูงสุด 50 รายการแรก
 5. รายการที่ `amount == 0` และยังไม่ claim จะแสดงเป็น `UNFUNDED`
 6. Dashboard ไม่เรียก `approve`, `registerPosition`, `fundNext`, `claim` หรือ `sendTransaction`
+
+ตัวกรอง Event รองรับ `Registered`, `RevenueScheduled`, `Claimed`, `Reborn` และ Wallet Address ที่อยู่ใน indexed event fields; การกรองเป็น read-only และไม่เปลี่ยนข้อมูลบนเชน
 
 ## ก่อนใช้งานเงินจริง
 
