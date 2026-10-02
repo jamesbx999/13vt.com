@@ -23,6 +23,7 @@ contract Transparent13VTQueue is ReentrancyGuard {
     uint256 public nextUnfundedTicketId = 1;
     uint256 public totalScheduled;
     uint256 public totalClaimed;
+    uint256 public totalReborn;
     mapping(uint256 => uint256) public rebornOf;
 
     struct Ticket {
@@ -158,6 +159,7 @@ contract Transparent13VTQueue is ReentrancyGuard {
         if (parent.recipient == address(0) || !parent.claimed) revert RebornNotEligible();
         if (rebornOf[parentId] != 0) revert RebornAlreadyCreated();
         rebornOf[parentId] = successorId = nextTicketId++;
+        totalReborn += 1;
         tickets[successorId] = Ticket({recipient: parent.recipient, amount: 0, claimed: false});
         emit Reborn(parentId, successorId, parent.recipient);
     }

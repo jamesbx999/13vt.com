@@ -8,6 +8,7 @@
 - `fundNext(amount, recipientCount)` รับเงินทุนภายนอกและจัดสรรให้ ticket ที่รออยู่ตาม `ticketId` FIFO
 - `claim(ticketId)` ให้ผู้รับดึงยอดของตนเอง โดย state ถูก commit ก่อน token transfer
 - `createRebornPosition(parentId)` สร้าง successor ได้ครั้งเดียวหลัง parent ถูก Claim สำเร็จ และ emit `Reborn(parentId, successorId, recipient)`; successor เริ่มต้นด้วยยอด 0/ยังไม่มีทุน
+- `totalClaimed()` และ `totalReborn()` เป็น cumulative on-chain counters ที่ Dashboard ใช้สร้างการ์ดสถิติ ไม่ใช่ค่าที่นับจาก event window ล่าสุด
 - ตรวจยอด token ที่เข้า contract ด้วย balance delta เพื่อปฏิเสธ fee-on-transfer/rebase behavior ที่ยอดไม่ตรง
 - ใช้ `nonReentrant` กับฟังก์ชันที่ทำ external token/BNB call
 - ไม่มี owner sweep, referral tree, automatic Reborn, mint, guaranteed return หรือ hidden routing
