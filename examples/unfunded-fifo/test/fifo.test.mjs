@@ -78,6 +78,28 @@ test('U1 must have a successful mock payout AND both children before U2 enters F
   await assert.rejects(model.connect(other).enqueueQualifiedFromA(other.address, ref('unauthorized')));
 });
 
+test('central even-deposit markers fund the oldest B parent when its left child is placed', async () => {
+  const { model, operator, other } = await setup();
+  const u1 = await seed(model, operator.address, '0x' + '00'.repeat(32));
+  const left = await addA(model, other.address);
+  const right = await addA(model, other.address);
+  const centralRef = ref('A4-central-pool');
+
+  await (await model.recordMockCentralEvenFunding(centralRef, gas)).wait();
+  await place(model, left);
+  const afterLeft = await model.positions(u1);
+  assert.equal(afterLeft.leftId, left);
+  assert.equal(afterLeft.payoutConfirmed, true, 'left placement consumes central funding');
+  assert.equal(afterLeft.illustrativeFundingRef, centralRef);
+  assert.equal(await model.paymentState(u1), 2n);
+  assert.equal(await model.centralEvenFundingHead(), 1n);
+
+  await place(model, right);
+  assert.equal(await model.nextId(), 5n, 'U2 is created only after both slots are filled');
+  assert.equal((await model.positions(4)).origin, 1n);
+  assert.equal(await model.paymentState(4), 0n, 'successor starts UNFUNDED');
+});
+
 test('unfunded U2 receives left and right in place-and-hold without being skipped, paid, or reborn again', async () => {
   const { model, operator, other } = await setup();
   await seed(model, operator.address, ref('U1-deposit-2'));

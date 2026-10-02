@@ -45,11 +45,15 @@ contract UnfundedFifoModel {
     uint64[] public fifo;
     mapping(uint64 => Position) public positions;
     mapping(bytes32 => bool) public illustrativeFundingRefUsed;
+    bytes32[] public centralEvenFundingRefs;
+    uint256 public centralEvenFundingHead;
     bool public rootSeeded;
 
     event Enqueued(uint64 indexed id, address indexed owner, Origin origin, uint64 sequence);
     event Placed(uint64 indexed childId, uint64 indexed parentId, bool isLeft);
     event MockFundingRecorded(uint64 indexed id, bytes32 indexed fundingOrPayoutRef);
+    event MockCentralFundingRecorded(bytes32 indexed fundingRef, uint256 queueIndex);
+    event MockCentralPayoutRecorded(uint64 indexed id, bytes32 indexed fundingRef);
     event MockPayoutRecorded(uint64 indexed id, bytes32 indexed fundingOrPayoutRef);
     event Reborn(uint64 indexed parentId, uint64 indexed successorId);
 
@@ -84,6 +88,16 @@ contract UnfundedFifoModel {
         _recordFunding(id, fundingOrPayoutRef);
     }
 
+    /// @dev Represents an even Direct #4/#6/... deposit entering the global B pool.
+    ///      This records a unique marker only; it does not receive or transfer tokens.
+    function recordMockCentralEvenFunding(bytes32 fundingRef) external onlyOperator {
+        if (fundingRef == bytes32(0)) revert InvalidReference();
+        if (illustrativeFundingRefUsed[fundingRef]) revert DuplicateFundingReference();
+        illustrativeFundingRefUsed[fundingRef] = true;
+        centralEvenFundingRefs.push(fundingRef);
+        emit MockCentralFundingRecorded(fundingRef, centralEvenFundingRefs.length - 1);
+    }
+
     /**
      * @notice PLACE-AND-HOLD: place under oldest parent with an empty slot, left before right.
      *         Unfunded parent is never bypassed. Placement NEVER pays or claims anything.
@@ -108,6 +122,11 @@ contract UnfundedFifoModel {
         }
         child.parentId = parentId;
         emit Placed(childId, parentId, isLeft);
+        // A left placement is the payout trigger. The oldest available central
+        // even-deposit marker funds the parent; an empty pool leaves it UNFUNDED.
+        if (isLeft && !parent.payoutConfirmed && centralEvenFundingHead < centralEvenFundingRefs.length) {
+            _recordCentralMockPayout(parentId);
+        }
         _rebornIfComplete(parentId);
     }
 
@@ -163,6 +182,15 @@ contract UnfundedFifoModel {
         illustrativeFundingRefUsed[fundingOrPayoutRef] = true;
         positions[id].illustrativeFundingRef = fundingOrPayoutRef;
         emit MockFundingRecorded(id, fundingOrPayoutRef);
+    }
+
+    function _recordCentralMockPayout(uint64 id) internal {
+        Position storage p = positions[id];
+        bytes32 fundingRef = centralEvenFundingRefs[centralEvenFundingHead++];
+        p.illustrativeFundingRef = fundingRef;
+        p.illustrativePayoutRef = fundingRef;
+        p.payoutConfirmed = true;
+        emit MockCentralPayoutRecorded(id, fundingRef);
     }
 
     function _rebornIfComplete(uint64 id) internal returns (uint64 successor) {

@@ -1,12 +1,17 @@
 flowchart LR
-  U1[U1 รับ 13 สำเร็จ] --> BOTH{ซ้าย+ขวาครบ?}
-  BOTH -- ไม่ครบ --> WAIT[รอลูกอีกฝั่ง]
-  BOTH -- ครบ --> U2[สร้าง U2 และเข้าคิว B ทันที]
-  U2 --> NOFUNDS[ไม่มีเงินฝาก U2<br/>UNFUNDED; claimable = 0]
+  A[Direct #4/#6/... จากทุก Position] --> POOL[กองทุนกลาง<br/>เรียงตาม depositId/เวลาที่บันทึก]
+  U1[Position ได้รับ A สำเร็จ<br/>มีซ้าย+ขวาครบ] --> U2[สร้าง U2 และเข้าคิว B ทันที]
+  U2 --> NOFUNDS[U2 ไม่มี reserve ของตน<br/>UNFUNDED]
   NOFUNDS --> FIFO[เลือก Parent ว่างเก่าสุด<br/>FIFO รวม A-born + B-born]
   FIFO --> SLOT{ช่องแรกว่าง?}
-  SLOT -- ซ้าย --> L[วางลูกซ้ายตามคิว<br/>ยัง UNFUNDED]
-  SLOT -- ขวา --> R[วางลูกขวาตามคิว<br/>ยัง UNFUNDED]
-  L --> HOLD[ไม่จ่าย; ไม่ Claim; ไม่ Reborn U3]
-  R --> HOLD
-  HOLD --> SAFETY[ไม่ข้าม Parent ไร้เงิน<br/>ไม่ใช้ reserve ของผู้อื่น]
+  SLOT -- ซ้าย --> L[วางลูกซ้าย]
+  SLOT -- ขวา --> R[วางลูกขวา]
+  L --> HAS{กองทุนกลางมี deposit ที่ยังไม่ใช้?}
+  HAS -- มี --> PAY[ใช้ deposit คู่ที่เก่าสุด<br/>จ่ายเจ้าของ Parent 13 USDT<br/>Paid เพียงครั้งเดียว]
+  HAS -- ไม่มี --> HOLD[วางแล้วค้าง<br/>UNFUNDED/Pending]
+  R --> WAIT[ไม่ trigger payout<br/>รอซ้าย/เงินกองทุน]
+  PAY --> BOTH{ซ้าย+ขวาครบ?}
+  BOTH -- ครบ --> NEXT[สร้าง Reborn Position ใหม่<br/>เข้า FIFO แบบ UNFUNDED]
+  BOTH -- ไม่ครบ --> WAIT
+  HOLD --> SAFETY[ไม่ข้าม Parent FIFO<br/>ไม่ใช้ reserve ของลูกซ้ำ<br/>mock นี้ไม่โอนเงินจริง]
+  POOL --> HAS
