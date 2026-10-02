@@ -12,6 +12,7 @@ export type JournalEntry = {
   label: string;
   status: JournalStatus;
   hash: string;
+  chainId: 56 | 97;
   createdAt: number;
   detail: string;
 };
@@ -24,6 +25,19 @@ export const isBscMainnet = (chainId: unknown): boolean =>
   typeof chainId === "string" &&
   /^0x[0-9a-fA-F]+$/.test(chainId) &&
   BigInt(chainId) === BigInt(56);
+
+export const isBscTestnet = (chainId: unknown): boolean =>
+  typeof chainId === "string" &&
+  /^0x[0-9a-fA-F]+$/.test(chainId) &&
+  BigInt(chainId) === BigInt(97);
+
+export function transactionExplorerUrl(
+  hash: string,
+  chainId: 56 | 97
+): string | null {
+  if (!isTransactionHash(hash)) return null;
+  return `${chainId === 97 ? "https://testnet.bscscan.com" : "https://bscscan.com"}/tx/${hash}`;
+}
 
 /** A receipt (not merely a tx hash or backend response) is proof of mining. */
 export function receiptOutcome(

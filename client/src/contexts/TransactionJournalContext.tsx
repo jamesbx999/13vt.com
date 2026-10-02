@@ -22,15 +22,17 @@ import { useLanguage, type LanguageCode } from "./LanguageContext";
 import {
   errorOutcome,
   isBscMainnet,
+  isBscTestnet,
   isTransactionHash,
   JOURNAL_STORAGE_KEY,
   receiptOutcome,
+  transactionExplorerUrl,
   type JournalEntry,
   type JournalStatus,
 } from "@/lib/transactionJournal";
 
 type JournalApi = {
-  start: (label: string) => string;
+  start: (label: string, chainId?: 56 | 97) => string;
   sent: (id: string, hash: string) => void;
   receipt: (id: string, value: unknown) => void;
   error: (id: string, value: unknown) => void;
@@ -67,16 +69,20 @@ function restoreJournal(): JournalEntry[] {
         );
       })
       .slice(0, 10)
-      .map(row =>
-        row.status === "awaiting_wallet"
+      .map(row => {
+        const validRow: JournalEntry = {
+          ...row,
+          chainId: row.chainId === 97 ? 97 : 56,
+        };
+        return validRow.status === "awaiting_wallet"
           ? {
-              ...row,
-              status: "unknown",
+              ...validRow,
+              status: "unknown" as const,
               detail:
                 "Wallet prompt ended when this tab was closed; check your wallet before retrying.",
             }
-          : row
-      );
+          : validRow;
+      });
   } catch {
     return [];
   }
@@ -195,13 +201,14 @@ export function TransactionJournalProvider({
       )
     );
   }, []);
-  const start = useCallback((label: string) => {
+  const start = useCallback((label: string, chainId: 56 | 97 = 56) => {
     const id = crypto.randomUUID();
     const entry: JournalEntry = {
       id,
       label,
       status: "awaiting_wallet",
       hash: "",
+      chainId,
       detail: "",
       createdAt: Date.now(),
     };
@@ -258,9 +265,15 @@ export function TransactionJournalProvider({
     if (!provider?.request) return;
     try {
       const chainId = await provider.request({ method: "eth_chainId" });
-      if (!isBscMainnet(chainId)) return; // Never check a BSC Mainnet tx against another chain.
+      const selectedChain = isBscMainnet(chainId)
+        ? 56
+        : isBscTestnet(chainId)
+          ? 97
+          : null;
+      if (!selectedChain) return;
       const current = entries.filter(
         row =>
+          row.chainId === selectedChain &&
           (row.status === "pending" || row.status === "unknown") &&
           isTransactionHash(row.hash)
       );
@@ -388,7 +401,10 @@ export function TransactionJournalProvider({
                           )}
                           {row.hash && (
                             <a
-                              href={`https://bscscan.com/tx/${row.hash}`}
+                              href={
+                                transactionExplorerUrl(row.hash, row.chainId) ||
+                                undefined
+                              }
                               target="_blank"
                               rel="noreferrer"
                               className="mt-1 inline-flex items-center gap-1 break-all font-mono text-[11px] text-teal-800 underline"
