@@ -1595,7 +1595,10 @@ export default function Home() {
                   <Button
                     onClick={() =>
                       account
-                        ? void copyConnectedWallet()
+                        ? (() => {
+                            setSignInOpen(true);
+                            setSignInError("");
+                          })()
                         : (() => {
                             setSignInOpen(true);
                             setSignInStatus("idle");
@@ -1605,7 +1608,7 @@ export default function Home() {
                     className="wallet-gradient-button gap-2 px-4 text-white hover:bg-slate-800"
                     title={
                       account
-                        ? `Connected wallet: ${account}`
+                        ? `เปิดหน้าสมัครสำหรับ ${account}`
                         : "Connect wallet"
                     }
                     aria-label={
@@ -2691,7 +2694,7 @@ export default function Home() {
                       onClick={registerReferralOnchain}
                       className="w-full rounded-xl bg-emerald-700 text-white hover:bg-emerald-800"
                     >
-                      Register with referral code
+                      Approve 13 USDT + Register · Fee 0.0013 BNB
                     </Button>
                   )}
                   {registrationStatus === "pending" && (
