@@ -82,6 +82,9 @@ contract Transparent13VTQueueUpgradeable is Initializable, OwnableUpgradeable, U
         depositAmount = 13 * (10 ** decimals);
         serviceFeeWei = 0.0013 ether;
         maxFundTickets = 50;
+        // Proxy storage does not receive implementation state-variable initializers.
+        nextTicketId = 1;
+        nextUnfundedTicketId = 1;
         emit InitializedConfig(address(asset_), decimals, depositAmount, serviceFeeWei, maxFundTickets, feeWallet_, initialOwner);
     }
 
