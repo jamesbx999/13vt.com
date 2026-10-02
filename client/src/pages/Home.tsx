@@ -803,7 +803,14 @@ export default function Home() {
   }
 
   async function registerReferralOnchain() {
-    if (!account || !Web3.utils.isAddress(contractAddress)) {
+    const normalizedContractAddress = contractAddress.trim();
+    let wallet = account;
+    if (!wallet && provider) {
+      const accounts = await provider.request({ method: "eth_accounts" });
+      wallet = accounts?.[0] || "";
+      if (wallet) setAccount(wallet);
+    }
+    if (!wallet || !Web3.utils.isAddress(normalizedContractAddress)) {
       setRegistrationStatus("error");
       setRegistrationError(
         "ต้องเชื่อมต่อ Wallet และกรอก Contract Address ที่ถูกต้องก่อน"
@@ -823,8 +830,8 @@ export default function Home() {
       await assertBscWriteNetwork(provider);
       const receipt = await submitReferralRegistration(
         provider,
-        contractAddress,
-        account,
+        normalizedContractAddress,
+        wallet,
         SUGGESTED_REFERRER,
         referralCode,
         (step, stage, value) => {
