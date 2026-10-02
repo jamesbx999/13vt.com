@@ -4,7 +4,7 @@ import { AlertTriangle, Bell, CheckCircle2, ChevronLeft, ChevronRight, Clock3, L
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const TESTNET_RPC = "https://bsc-testnet-dataseed.bnbchain.org";
-const DEFAULT_TESTNET_QUEUE_ADDRESS = import.meta.env.VITE_TESTNET_QUEUE_ADDRESS || "";
+const DEFAULT_TESTNET_QUEUE_ADDRESS = import.meta.env.VITE_TESTNET_QUEUE_ADDRESS || "0x6575a3319271d1a2fc269b161ab57ed465103838";
 const MAX_ROWS = 50;
 const MAX_EVENTS = 300;
 const EVENTS_PER_PAGE = 10;

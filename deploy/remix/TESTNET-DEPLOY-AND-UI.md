@@ -3,7 +3,8 @@
 ## สถานะ
 
 - `Transparent13VTQueue.sol` compile candidate ผ่านด้วย Solidity `0.8.24` และ OpenZeppelin `5.4.0`
-- ยัง **ไม่ได้ deploy** และยังไม่มี contract address จริงใน UI
+- **Deploy สำเร็จบน BSC Testnet:** Contract `0x6575a3319271d1a2fc269b161ab57ed465103838`; deployment tx `0xbb6181efc43903dbb5eb3ccf24ad45a819d7c2423cb0b737af44edfbae304a75`; receipt `status = 1`, block `134362954`
+- Source verification สำเร็จบน BscScan; getter ตรวจแล้วว่า `asset = 0x337610d27c682e347c9cd60bd4b3b107c9d34ddd`, `feeWallet = 0xE465e694E9194b848D597b21ce4104f9C36Fc6d2`, `totalReborn = 0`, `nextTicketId = 1`
 - การ deploy เป็นธุรกรรม on-chain ต้องใช้ wallet ของผู้ใช้เองและต้องตรวจ payload ใน Remix ก่อนยืนยัน
 
 ## Deploy ด้วย Remix แบบปลอดภัย
