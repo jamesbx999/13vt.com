@@ -119,10 +119,13 @@ type TxStatus = "idle" | JournalStatus;
 type AdminAction = "pause" | "unpause" | "registerFor";
 const DEMO_ROWS: Array<{
   id: number;
+  rawAmount?: string;
   recipient: string;
   amount: string;
   status: string;
   block: string;
+  address?: string;
+  isOwner?: boolean;
 }> = [];
 
 function MetricCard({
@@ -1874,6 +1877,30 @@ export default function Home() {
               </p>
             )}
 
+            <section className="rounded-2xl border border-amber-200 bg-amber-50/75 p-5 shadow-[0_12px_40px_rgba(245,158,11,0.08)]">
+              <div className="flex items-start gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-amber-100 text-amber-700 ring-8 ring-amber-50">
+                  <CircleDollarSign size={21} />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-bold tracking-tight text-amber-950">
+                      Commission ที่ยืนยันบนเชน
+                    </h2>
+                    <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-700">
+                      ID เลขคี่
+                    </span>
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-amber-950">
+                    0 USDT
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-amber-900/75">
+                    Proxy Mainnet ปัจจุบันยังไม่มี CommissionPaid หรือฟังก์ชันจ่าย Commission จากเงื่อนไข ID เลขคี่ จึงแสดงเฉพาะยอดที่มีหลักฐานบนเชน และยังไม่แสดงเป็นรายได้
+                  </p>
+                </div>
+              </div>
+            </section>
+
             <section className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-[0_12px_40px_rgba(16,185,129,0.08)] sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -1996,17 +2023,42 @@ export default function Home() {
                                     View on Explorer <ExternalLink size={13} />
                                   </button>
                                 ) : (
-                                  <button
-                                    disabled={
-                                      !snapshot ||
-                                      row.status !== "Allocated" ||
-                                      referralStatus?.paused
-                                    }
-                                    onClick={() => openClaim(row as any)}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 px-3 py-2 text-xs font-semibold text-teal-700 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                  >
-                                    Claim <ArrowUpRight size={13} />
-                                  </button>
+                                  <div className="flex flex-col items-end gap-1.5">
+                                    <button
+                                      disabled={
+                                        !snapshot ||
+                                        row.status !== "Allocated" ||
+                                        !row.isOwner ||
+                                        referralStatus?.paused
+                                      }
+                                      onClick={() => openClaim(row as any)}
+                                      title={
+                                        !snapshot
+                                          ? "ต้องอ่านข้อมูลจาก Smart Contract ก่อน"
+                                          : row.status !== "Allocated"
+                                            ? "Ticket ยังไม่ Funded"
+                                            : !row.isOwner
+                                              ? "ต้องเชื่อมต่อ Wallet ของ Recipient"
+                                              : referralStatus?.paused
+                                                ? "Contract ถูก Pause"
+                                                : "เรียก claim ผ่าน MetaMask"
+                                      }
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 px-3 py-2 text-xs font-semibold text-teal-700 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:opacity-100"
+                                    >
+                                      Claim <ArrowUpRight size={13} />
+                                    </button>
+                                    {(!snapshot || row.status !== "Allocated" || !row.isOwner || referralStatus?.paused) && (
+                                      <span className="max-w-[180px] text-right text-[10px] leading-4 text-slate-400">
+                                        {!snapshot
+                                          ? "อ่านข้อมูล On-chain ก่อน"
+                                          : row.status !== "Allocated"
+                                            ? "ยังไม่ Funded · รอ fundNext()"
+                                            : !row.isOwner
+                                              ? "ต้องใช้ Wallet ของ Recipient"
+                                              : "Contract ถูก Pause"}
+                                      </span>
+                                    )}
+                                  </div>
                                 )}
                               </td>
                             </tr>
