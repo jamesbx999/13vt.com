@@ -82,6 +82,7 @@ import {
   ReferralTree,
   type ReferralTreeNode,
 } from "@/components/ReferralTree";
+import { ReferralSystemsPanel } from "@/components/ReferralSystemsPanel";
 
 declare global {
   interface Window {
@@ -2414,6 +2415,12 @@ export default function Home() {
                 ? t("eventPathLoading")
                 : t("treeDataNotice"))
             }
+          />
+          <ReferralSystemsPanel
+            provider={provider}
+            contractAddress={contractAddress}
+            account={account}
+            refreshInterval={refreshInterval}
           />
         </main>
       </div>

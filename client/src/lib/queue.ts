@@ -106,6 +106,14 @@ export type ReferralPathEvent = {
   registeredBy: string;
 };
 
+export type RebornEvent = {
+  hash: string;
+  blockNumber: number;
+  parentId: string;
+  successorId: string;
+  recipient: string;
+};
+
 function tupleValue(value: any, name: string, index: number) {
   return value?.[name] ?? value?.[index] ?? 0;
 }
@@ -401,6 +409,31 @@ export async function readDirectReferralCount(
   return events.length;
 }
 
+export async function readRebornEvents(
+  provider: any,
+  contractAddress: string,
+  wallet: string
+): Promise<RebornEvent[]> {
+  if (!provider) throw new Error("ไม่พบ MetaMask หรือ EIP-1193 provider");
+  if (!isAddress(contractAddress) || !isAddress(wallet))
+    throw new Error("Contract หรือ wallet ไม่ถูกต้อง");
+  const web3 = new Web3(provider);
+  const contract: any = new web3.eth.Contract(QUEUE_ABI as any, contractAddress);
+  const events: any[] = await getPastEventsBounded(web3, contract, "Reborn", {
+    filter: { recipient: wallet },
+  });
+  return events
+    .sort((a, b) => Number(a.blockNumber || 0) - Number(b.blockNumber || 0))
+    .slice(-50)
+    .map(event => ({
+      hash: String(event.transactionHash || ""),
+      blockNumber: Number(event.blockNumber || 0),
+      parentId: String(tupleValue(event.returnValues, "parentId", 0)),
+      successorId: String(tupleValue(event.returnValues, "successorId", 1)),
+      recipient: String(tupleValue(event.returnValues, "recipient", 2)),
+    }));
+}
+
 export async function readReferralStatus(
   provider: any,
   contractAddress: string,
@@ -674,6 +707,32 @@ export function submitAdminAction(
   if (action === "pause") return contract.methods.pause().send(sendOptions);
   if (action === "unpause") return contract.methods.unpause().send(sendOptions);
   return contract.methods.registerFor(user).send(sendOptions);
+}
+
+export function submitUpgradeToAndCall(
+  provider: any,
+  proxyAddress: string,
+  account: string,
+  implementation: string,
+  data = "0x"
+) {
+  if (!provider || !isAddress(proxyAddress) || !isAddress(account) || !isAddress(implementation))
+    throw new Error("ข้อมูล Proxy, Owner หรือ Implementation ไม่ถูกต้อง");
+  const web3 = new Web3(provider);
+  const contract: any = new web3.eth.Contract(
+    [{
+      inputs: [
+        { internalType: "address", name: "newImplementation", type: "address" },
+        { internalType: "bytes", name: "data", type: "bytes" },
+      ],
+      name: "upgradeToAndCall",
+      outputs: [],
+      stateMutability: "payable",
+      type: "function",
+    }] as any,
+    proxyAddress
+  );
+  return contract.methods.upgradeToAndCall(implementation, data).send({ from: account, value: "0" });
 }
 
 export type AdminGasEstimate = ClaimGasEstimate & {
