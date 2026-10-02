@@ -233,10 +233,23 @@ export const QUEUE_ABI = [
     anonymous: false,
     inputs: [
       { indexed: true, name: "ticketId", type: "uint256" },
+      { indexed: true, name: "payer", type: "address" },
       { indexed: true, name: "recipient", type: "address" },
-      { indexed: true, name: "registeredBy", type: "address" },
+      { indexed: false, name: "tokenAmount", type: "uint256" },
+      { indexed: false, name: "serviceFeeWei", type: "uint256" },
     ],
     name: "Registered",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "code", type: "bytes32" },
+      { indexed: true, name: "user", type: "address" },
+      { indexed: true, name: "referrer", type: "address" },
+      { indexed: false, name: "ticketId", type: "uint256" },
+    ],
+    name: "ReferralRegistered",
     type: "event",
   },
   {
@@ -363,7 +376,27 @@ export type ReferralPathEvent = {
 function tupleValue(value: any, name: string, index: number) {
   return value?.[name] ?? value?.[index] ?? 0;
 }
-
+async function getPastEventsBounded(
+  web3: Web3,
+  contract: any,
+  eventName: string,
+  options: { filter?: Record<string, string> } = {}
+) {
+  const latest = Number(await web3.eth.getBlockNumber());
+  const fromBlock = Math.max(0, latest - 200_000);
+  const step = 9_000;
+  const events: any[] = [];
+  for (let start = fromBlock; start <= latest; start += step) {
+    const end = Math.min(latest, start + step - 1);
+    const batch = await contract.getPastEvents(eventName, {
+      ...options,
+      fromBlock: start,
+      toBlock: end,
+    });
+    events.push(...batch);
+  }
+  return events;
+}
 function isAddress(value: string) {
   return Web3.utils.isAddress(value);
 }
@@ -548,10 +581,11 @@ export async function readReferralCodeHistory(
     QUEUE_ABI as any,
     contractAddress
   );
-  const events: any[] = await contract.getPastEvents("ReferralCodeConfigured", {
-    fromBlock: 0,
-    toBlock: "latest",
-  });
+  const events: any[] = await getPastEventsBounded(
+    web3,
+    contract,
+    "ReferralCodeConfigured"
+  );
   return events
     .slice(-100)
     .reverse()
@@ -586,11 +620,12 @@ export async function readReferralPathEvents(
     QUEUE_ABI as any,
     contractAddress
   );
-  const events: any[] = await contract.getPastEvents("Registered", {
-    filter: { recipient: wallet },
-    fromBlock: 0,
-    toBlock: "latest",
-  });
+  const events: any[] = await getPastEventsBounded(
+    web3,
+    contract,
+    "ReferralRegistered",
+    { filter: { referrer: wallet } }
+  );
   const selected = events
     .sort((a, b) => Number(a.blockNumber || 0) - Number(b.blockNumber || 0))
     .slice(-50);
@@ -604,11 +639,33 @@ export async function readReferralPathEvents(
         blockNumber: Number(event.blockNumber || 0),
         timestamp: block?.timestamp ? Number(block.timestamp) * 1000 : null,
         ticketId: String(tupleValue(event.returnValues, "ticketId", 0)),
-        recipient: String(tupleValue(event.returnValues, "recipient", 1)),
-        registeredBy: String(tupleValue(event.returnValues, "registeredBy", 2)),
+        recipient: String(tupleValue(event.returnValues, "user", 1)),
+        registeredBy: String(tupleValue(event.returnValues, "referrer", 2)),
       };
     })
   );
+}
+
+export async function readDirectReferralCount(
+  provider: any,
+  contractAddress: string,
+  wallet: string
+): Promise<number> {
+  if (!provider) throw new Error("ไม่พบ MetaMask หรือ EIP-1193 provider");
+  if (!isAddress(contractAddress) || !isAddress(wallet))
+    throw new Error("Contract หรือ wallet ไม่ถูกต้อง");
+  const web3 = new Web3(provider);
+  const contract: any = new web3.eth.Contract(
+    QUEUE_ABI as any,
+    contractAddress
+  );
+  const events: any[] = await getPastEventsBounded(
+    web3,
+    contract,
+    "ReferralRegistered",
+    { filter: { referrer: wallet } }
+  );
+  return events.length;
 }
 
 export async function readReferralStatus(

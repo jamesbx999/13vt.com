@@ -12,6 +12,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   Clipboard,
+  QrCode,
   Code2,
   Database,
   ExternalLink,
@@ -31,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import Web3 from "web3";
+import { QRCodeSVG } from "qrcode.react";
 import {
   BSC_CHAIN_ID,
   AdminTransaction,
@@ -48,6 +50,7 @@ import {
   readAdminHistory,
   readReferralStatus,
   readReferralPathEvents,
+  readDirectReferralCount,
   readQueueSnapshot,
   shortAddress,
   buildSignInMessage,
@@ -493,6 +496,8 @@ export default function Home() {
   >([]);
   const [referralPathLoading, setReferralPathLoading] = useState(false);
   const [referralPathError, setReferralPathError] = useState("");
+  const [directReferralCount, setDirectReferralCount] = useState(0);
+  const [directReferralError, setDirectReferralError] = useState("");
   const [referralStatusError, setReferralStatusError] = useState("");
   const [stakeOpen, setStakeOpen] = useState(false);
   const [staking, setStaking] = useState(false);
@@ -592,15 +597,20 @@ export default function Home() {
       setReferralPathLoading(true);
       setReferralPathError("");
       try {
-        const events = await readReferralPathEvents(
-          provider,
-          contractAddress,
-          account
-        );
-        if (!cancelled) setReferralPathEvents(events);
+        const [events, count] = await Promise.all([
+          readReferralPathEvents(provider, contractAddress, account),
+          readDirectReferralCount(provider, contractAddress, account),
+        ]);
+        if (!cancelled) {
+          setReferralPathEvents(events);
+          setDirectReferralCount(count);
+          setDirectReferralError("");
+        }
       } catch (error: any) {
-        if (!cancelled)
+        if (!cancelled) {
           setReferralPathError(error?.message || t("onchainReadError"));
+          setDirectReferralError(error?.message || t("onchainReadError"));
+        }
       } finally {
         if (!cancelled) setReferralPathLoading(false);
       }
@@ -2115,19 +2125,57 @@ export default function Home() {
                       <p className="text-[11px] font-bold text-teal-900">
                         ลิงก์ Referral ของ Wallet นี้
                       </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <code className="min-w-0 flex-1 truncate rounded-lg bg-white px-2.5 py-2 font-mono text-[10px] text-teal-800">
-                          {personalReferralLink}
-                        </code>
-                        <button
-                          type="button"
-                          onClick={() => void copyPersonalReferralLink()}
-                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-teal-800"
-                          aria-label="คัดลอกลิงก์ Referral ของ Wallet นี้"
-                        >
-                          <Clipboard size={13} /> คัดลอก
-                        </button>
+                      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div className="w-fit rounded-xl bg-white p-2 shadow-sm">
+                          <QRCodeSVG
+                            value={personalReferralLink}
+                            size={112}
+                            level="M"
+                            includeMargin
+                            aria-label="QR Code ลิงก์ Referral ของ Wallet นี้"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <code className="block truncate rounded-lg bg-white px-2.5 py-2 font-mono text-[10px] text-teal-800">
+                            {personalReferralLink}
+                          </code>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void copyPersonalReferralLink()}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-teal-800"
+                              aria-label="คัดลอกลิงก์ Referral ของ Wallet นี้"
+                            >
+                              <Clipboard size={13} /> คัดลอก
+                            </button>
+                            <a
+                              href={`https://line.me/R/msg/text/?${encodeURIComponent(`สมัครผ่านลิงก์ Referral ของฉัน: ${personalReferralLink}`)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center rounded-lg bg-[#06c755] px-3 py-2 text-[11px] font-bold text-white transition hover:brightness-95"
+                            >
+                              แชร์ LINE
+                            </a>
+                            <a
+                              href={`https://t.me/share/url?url=${encodeURIComponent(personalReferralLink)}&text=${encodeURIComponent("สมัครผ่านลิงก์ Referral ของฉัน")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center rounded-lg bg-[#229ed9] px-3 py-2 text-[11px] font-bold text-white transition hover:brightness-95"
+                            >
+                              แชร์ Telegram
+                            </a>
+                          </div>
+                        </div>
                       </div>
+                      <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-teal-900">
+                        <QrCode size={14} />
+                        สมัครผ่านลิงก์นี้แล้ว: {directReferralCount} คน
+                      </div>
+                      {directReferralError && (
+                        <p className="mt-1 text-[10px] text-amber-700">
+                          ยังอ่านจำนวน Referral จาก Event ไม่สำเร็จ: {directReferralError}
+                        </p>
+                      )}
                       <p className="mt-2 text-[10px] leading-4 text-teal-800">
                         แชร์ลิงก์นี้ให้สมาชิกใหม่ ระบบจะผูกผู้แนะนำเป็น Wallet นี้โดยตรง
                       </p>
