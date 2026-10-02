@@ -96,7 +96,9 @@ const SESSION_KEY = "onchain-queue-session";
 const SESSION_TTL_MS = 30 * 60 * 1000;
 
 function referralCodeFromUrl() {
-  const code = new URLSearchParams(window.location.search).get("ref") || "";
+  const code =
+    new URLSearchParams(window.location.search).get("ref")?.trim() || "";
+  if (Web3.utils.isAddress(code)) return code;
   return /^[A-Za-z0-9]{1,32}$/.test(code) ? code.toUpperCase() : "";
 }
 async function assertBscWriteNetwork(provider: any) {
@@ -461,6 +463,18 @@ export default function Home() {
       toast.error(t("walletAddressCopyFailed"));
     }
   }, [account, t, toast]);
+  const personalReferralLink = account
+    ? `${window.location.origin}/?ref=${account}`
+    : "";
+  const copyPersonalReferralLink = useCallback(async () => {
+    if (!personalReferralLink) return;
+    try {
+      await navigator.clipboard.writeText(personalReferralLink);
+      toast.success("คัดลอกลิงก์ Referral แล้ว");
+    } catch {
+      toast.error("คัดลอกลิงก์ Referral ไม่สำเร็จ");
+    }
+  }, [personalReferralLink, toast]);
   const [claimError, setClaimError] = useState("");
   const [gasEstimate, setGasEstimate] = useState<ClaimGasEstimate | null>(null);
   const [gasEstimateStatus, setGasEstimateStatus] = useState<
@@ -2096,6 +2110,29 @@ export default function Home() {
                       </span>
                     </div>
                   </div>
+                  {personalReferralLink && (
+                    <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/70 p-3">
+                      <p className="text-[11px] font-bold text-teal-900">
+                        ลิงก์ Referral ของ Wallet นี้
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <code className="min-w-0 flex-1 truncate rounded-lg bg-white px-2.5 py-2 font-mono text-[10px] text-teal-800">
+                          {personalReferralLink}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => void copyPersonalReferralLink()}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-teal-800"
+                          aria-label="คัดลอกลิงก์ Referral ของ Wallet นี้"
+                        >
+                          <Clipboard size={13} /> คัดลอก
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[10px] leading-4 text-teal-800">
+                        แชร์ลิงก์นี้ให้สมาชิกใหม่ ระบบจะผูกผู้แนะนำเป็น Wallet นี้โดยตรง
+                      </p>
+                    </div>
+                  )}
                   {referralStatusError && (
                     <p className="mt-3 text-[11px] leading-4 text-rose-700">
                       {referralStatusError}

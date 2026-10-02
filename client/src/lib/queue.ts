@@ -795,9 +795,15 @@ export async function submitReferralRegistration(
   }
 
   onStep?.("registration", "wallet");
-  const registration: any = code
+  const referralInput = code.trim();
+  const registration: any = isAddress(referralInput)
+    ? contract.methods.registerWithReferral(referralInput).send({
+        from: account,
+        value: serviceFeeWei,
+      })
+    : referralInput
     ? contract.methods
-        .registerWithReferralCode(referralCodeToBytes32(code))
+        .registerWithReferralCode(referralCodeToBytes32(referralInput))
         .send({ from: account, value: serviceFeeWei })
     : (() => {
         if (!isAddress(referrer)) throw new Error("Referrer Address ไม่ถูกต้อง");
