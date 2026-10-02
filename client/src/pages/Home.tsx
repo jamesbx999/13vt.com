@@ -91,9 +91,14 @@ const OWNER_ADDRESS =
   import.meta.env.VITE_ONCHAIN_OWNER_WALLET ||
   "0x11B948575B648be50Eef781251ebdc876907E618";
 const FEE_RECIPIENT = "0xE465e694E9194b848D597b21ce4104f9C36Fc6d2";
-const SUGGESTED_REFERRER = "0x5B3809F3f0b1f3D35Ae9F956fDbf777A3fF7DbfC";
+const SUGGESTED_REFERRER = OWNER_ADDRESS;
 const SESSION_KEY = "onchain-queue-session";
 const SESSION_TTL_MS = 30 * 60 * 1000;
+
+function referralCodeFromUrl() {
+  const code = new URLSearchParams(window.location.search).get("ref") || "";
+  return /^[A-Za-z0-9]{1,32}$/.test(code) ? code.toUpperCase() : "";
+}
 async function assertBscWriteNetwork(provider: any) {
   if (!provider?.request)
     throw new Error("ไม่พบ Wallet provider สำหรับส่งธุรกรรม");
@@ -502,7 +507,7 @@ export default function Home() {
     "idle" | "signing" | "signed" | "error"
   >("idle");
   const [signInError, setSignInError] = useState("");
-  const [referralCode, setReferralCode] = useState("");
+  const [referralCode, setReferralCode] = useState(referralCodeFromUrl);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
   const [registrationStatus, setRegistrationStatus] = useState<
     "idle" | "pending" | "confirmed" | "error"

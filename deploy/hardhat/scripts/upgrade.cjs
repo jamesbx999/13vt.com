@@ -37,12 +37,14 @@ async function main() {
   if (owner.toLowerCase() !== DESIGNATED_OWNER.toLowerCase()) {
     throw new Error("Proxy owner differs from the designated owner; refusing upgrade");
   }
+  const implementationContract = process.env.IMPLEMENTATION_CONTRACT || "Transparent13VTQueueUpgradeableReferral";
   if (process.env.EXECUTE_UPGRADE !== "YES") {
+    console.log(JSON.stringify({ implementationContract }, null, 2));
     console.log("DRY RUN: no implementation was deployed and no upgrade call was sent.");
     return;
   }
 
-  const implFactory = await ethers.getContractFactory("Transparent13VTQueueUpgradeable");
+  const implFactory = await ethers.getContractFactory(implementationContract);
   const implementation = await implFactory.deploy();
   await implementation.waitForDeployment();
   const newImplementation = await implementation.getAddress();
