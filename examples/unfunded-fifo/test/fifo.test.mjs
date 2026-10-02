@@ -78,6 +78,15 @@ test('U1 must have a successful mock payout AND both children before U2 enters F
   await assert.rejects(model.connect(other).enqueueQualifiedFromA(other.address, ref('unauthorized')));
 });
 
+test('fee policy accepts exactly 0.0013 BNB in wei but the mock collects nothing', async () => {
+  const { model } = await setup();
+  const exact = 1_300_000_000_000_000n;
+  assert.equal(await model.SERVICE_FEE_WEI(), exact);
+  assert.equal(await model.serviceFeeIsExact(exact), true);
+  assert.equal(await model.serviceFeeIsExact(exact - 1n), false);
+  assert.equal(await model.serviceFeeIsExact(exact + 1n), false);
+});
+
 test('central even-deposit markers fund the oldest B parent when its left child is placed', async () => {
   const { model, operator, other } = await setup();
   const u1 = await seed(model, operator.address, '0x' + '00'.repeat(32));

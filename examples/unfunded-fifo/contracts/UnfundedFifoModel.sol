@@ -9,6 +9,9 @@ pragma solidity ^0.8.24;
  *         Never expose the demo operator to the public as an authority over real balances.
  */
 contract UnfundedFifoModel {
+    // Policy reference only: the mock never accepts msg.value or custody of BNB.
+    uint256 public constant SERVICE_FEE_WEI = 0.0013 ether;
+
     enum Origin { QualifiedA, RebornB }
     enum PaymentState { Unfunded, FundedPending, Paid }
 
@@ -58,6 +61,11 @@ contract UnfundedFifoModel {
     event Reborn(uint64 indexed parentId, uint64 indexed successorId);
 
     constructor() { operator = msg.sender; }
+
+    /// @dev Pure policy helper for the future real entry function. This mock does not collect fees.
+    function serviceFeeIsExact(uint256 suppliedWei) external pure returns (bool) {
+        return suppliedWei == SERVICE_FEE_WEI;
+    }
 
     modifier onlyOperator() {
         if (msg.sender != operator) revert NotOperator();
