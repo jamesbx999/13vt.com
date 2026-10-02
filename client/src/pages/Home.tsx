@@ -105,43 +105,13 @@ async function assertBscWriteNetwork(provider: any) {
 }
 type TxStatus = "idle" | JournalStatus;
 type AdminAction = "pause" | "unpause" | "registerFor";
-const DEMO_ROWS = [
-  {
-    id: 124,
-    recipient: "0x8a3F…9d21",
-    amount: "240",
-    status: "Claimed",
-    block: "45,678,912",
-  },
-  {
-    id: 125,
-    recipient: "0x1B9c…7e44",
-    amount: "240",
-    status: "Allocated",
-    block: "45,678,945",
-  },
-  {
-    id: 126,
-    recipient: "0xC2d7…3A91",
-    amount: "—",
-    status: "Waiting",
-    block: "45,678,978",
-  },
-  {
-    id: 127,
-    recipient: "0x4E23…b681",
-    amount: "—",
-    status: "Waiting",
-    block: "45,679,011",
-  },
-  {
-    id: 128,
-    recipient: "0x7f8D…2c9E",
-    amount: "—",
-    status: "Waiting",
-    block: "45,679,044",
-  },
-];
+const DEMO_ROWS: Array<{
+  id: number;
+  recipient: string;
+  amount: string;
+  status: string;
+  block: string;
+}> = [];
 
 function MetricCard({
   icon: Icon,
@@ -1164,10 +1134,10 @@ export default function Home() {
         claimed: `${formatToken(snapshot.claimed, snapshot.decimals)} ${symbol}`,
       }
     : {
-        tickets: "128",
-        waiting: "24",
-        balance: "2,400 BSC-USD",
-        claimed: "1,920 BSC-USD",
+        tickets: "0",
+        waiting: "0",
+        balance: "0 BSC-USD",
+        claimed: "0 BSC-USD",
       };
 
   function explorerAddress(address: string) {
@@ -1970,27 +1940,27 @@ export default function Home() {
                         "asset",
                         snapshot?.asset
                           ? shortAddress(snapshot.asset)
-                          : "0x55d3…BSC-USD",
+                          : "ยังไม่มีข้อมูล",
                       ],
                       [
                         "nextTicketId",
-                        snapshot ? snapshot.registered + 1 : "129",
+                        snapshot ? snapshot.registered + 1 : "0",
                       ],
                       [
                         "nextUnfundedTicketId",
-                        snapshot ? snapshot.waiting : "106",
+                        snapshot ? snapshot.waiting : "0",
                       ],
                       [
                         "totalScheduled",
                         snapshot
                           ? formatToken(snapshot.scheduled, snapshot.decimals)
-                          : "128",
+                          : "0",
                       ],
                       [
                         "totalClaimed",
                         snapshot
                           ? `${formatToken(snapshot.claimed, snapshot.decimals)} ${snapshot.symbol}`
-                          : "1,920 BSC-USD",
+                          : "0 BSC-USD",
                       ],
                     ].map(([label, value]) => (
                       <div
