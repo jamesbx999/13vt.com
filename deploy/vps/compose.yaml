@@ -35,6 +35,8 @@ services:
         VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS: ${TESTNET_UPGRADEABLE_PROXY_ADDRESS:?Set TESTNET_UPGRADEABLE_PROXY_ADDRESS in deploy/vps/.env}
         VITE_TESTNET_QUEUE_ADDRESS: ${TESTNET_UPGRADEABLE_PROXY_ADDRESS:?Set TESTNET_UPGRADEABLE_PROXY_ADDRESS in deploy/vps/.env}
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
