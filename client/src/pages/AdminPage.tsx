@@ -1,9 +1,13 @@
 import {
   ArrowLeft,
   ExternalLink,
+  Loader2,
   LockKeyhole,
   ShieldCheck,
+  Wallet,
 } from "lucide-react";
+import { BrowserProvider, Contract, JsonRpcProvider } from "ethers";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { UpgradeableOwnerPanel } from "@/components/UpgradeableOwnerPanel";
 
@@ -11,8 +15,125 @@ const PROXY =
   import.meta.env.VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS ||
   "0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE";
 const EXPLORER = "https://testnet.bscscan.com";
+const RPC_URL = "https://bsc-testnet-rpc.publicnode.com";
+const OWNER_ABI = ["function owner() view returns (address)"];
+
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
 
 export default function AdminPage() {
+  const [account, setAccount] = useState("");
+  const [owner, setOwner] = useState("");
+  const [state, setState] = useState<
+    "idle" | "checking" | "granted" | "denied" | "error"
+  >("idle");
+  const [message, setMessage] = useState(
+    "เชื่อมต่อ Wallet Owner เพื่อยืนยันสิทธิ์"
+  );
+  const readProvider = new JsonRpcProvider(RPC_URL, 97);
+
+  async function verifyOwner() {
+    try {
+      if (!window.ethereum)
+        throw new Error("ไม่พบ MetaMask หรือ Wallet provider");
+      setState("checking");
+      const provider = new BrowserProvider(window.ethereum);
+      if ((await provider.getNetwork()).chainId !== BigInt(97)) {
+        throw new Error(
+          "กรุณาเปลี่ยน Wallet เป็น BNB Smart Chain Testnet (Chain ID 97)"
+        );
+      }
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      const contractOwner = await new Contract(
+        PROXY,
+        OWNER_ABI,
+        readProvider
+      ).owner();
+      setAccount(address);
+      setOwner(contractOwner);
+      if (address.toLowerCase() !== contractOwner.toLowerCase()) {
+        setState("denied");
+        setMessage("Wallet นี้ไม่ใช่ Owner — หน้าจัดการถูกล็อกไว้");
+        return;
+      }
+      setState("granted");
+      setMessage("ยืนยันสิทธิ์ Owner สำเร็จ");
+    } catch (error) {
+      setState("error");
+      setMessage(
+        error instanceof Error ? error.message : "ตรวจสอบสิทธิ์ไม่สำเร็จ"
+      );
+    }
+  }
+
+  useEffect(() => {
+    const onAccountsChanged = () => {
+      setState("idle");
+      setAccount("");
+      setMessage("Wallet เปลี่ยนแล้ว กรุณายืนยันสิทธิ์อีกครั้ง");
+    };
+    window.ethereum?.on?.("accountsChanged", onAccountsChanged);
+    return () =>
+      window.ethereum?.removeListener?.("accountsChanged", onAccountsChanged);
+  }, []);
+
+  if (state !== "granted") {
+    const denied = state === "denied";
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-8">
+        <section
+          className="w-full max-w-lg rounded-3xl border border-white/10 bg-white p-7 shadow-2xl sm:p-9"
+          aria-live="polite"
+        >
+          <div
+            className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${denied ? "bg-rose-100 text-rose-700" : "bg-violet-100 text-violet-700"}`}
+          >
+            {state === "checking" ? (
+              <Loader2 className="animate-spin" />
+            ) : denied ? (
+              <LockKeyhole />
+            ) : (
+              <ShieldCheck />
+            )}
+          </div>
+          <h1 className="mt-5 text-center text-2xl font-bold tracking-tight">
+            Owner verification required
+          </h1>
+          <p className="mt-2 text-center text-sm leading-6 text-slate-500">
+            {message}
+          </p>
+          {(account || owner) && (
+            <div className="mt-5 space-y-2 rounded-2xl bg-slate-50 p-4 font-mono text-xs text-slate-600">
+              <p>Connected: {account || "—"}</p>
+              <p>Contract owner: {owner || "—"}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => void verifyOwner()}
+            disabled={state === "checking"}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-violet-800 disabled:opacity-50"
+          >
+            <Wallet size={17} />{" "}
+            {state === "checking"
+              ? "กำลังตรวจสอบ…"
+              : "Connect & verify Owner wallet"}
+          </button>
+          <a
+            href="/"
+            className="mt-4 block text-center text-xs font-semibold text-slate-500 hover:text-violet-700"
+          >
+            กลับหน้า User dashboard
+          </a>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#f5f7fb] px-4 py-6 text-slate-900 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-7xl">
@@ -80,7 +201,7 @@ export default function AdminPage() {
         </header>
 
         <div className="mt-6">
-          <UpgradeableOwnerPanel />
+          <UpgradeableOwnerPanel verifiedAccount={account} />
         </div>
 
         <p className="mt-5 text-center text-xs leading-5 text-slate-500">

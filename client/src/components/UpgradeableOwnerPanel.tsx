@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 const TESTNET_CHAIN_ID = BigInt(97);
-const RPC_URL = "https://bsc-testnet-dataseed.bnbchain.org";
+const RPC_URL = "https://bsc-testnet-rpc.publicnode.com";
 const EXPLORER = "https://testnet.bscscan.com";
 const IMPLEMENTATION_SLOT =
   "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC";
@@ -39,6 +39,10 @@ const ABI = [
   "function setDepositAmount(uint256 newValue)",
   "function setMaxFundTickets(uint256 newValue)",
   "function setFeeWallet(address payable newWallet)",
+  "event ServiceFeeUpdated(uint256 oldValue, uint256 newValue)",
+  "event DepositAmountUpdated(uint256 oldValue, uint256 newValue)",
+  "event MaxFundTicketsUpdated(uint256 oldValue, uint256 newValue)",
+  "event FeeWalletUpdated(address indexed oldWallet, address indexed newWallet)",
 ];
 
 declare global {
@@ -64,9 +68,21 @@ type Config = {
   implementation: string;
 };
 
-export function UpgradeableOwnerPanel() {
+type AuditEntry = {
+  type: "Service fee" | "Deposit amount" | "Max fund tickets" | "Fee wallet";
+  oldValue: string;
+  newValue: string;
+  txHash: string;
+  blockNumber: number;
+};
+
+export function UpgradeableOwnerPanel({
+  verifiedAccount = "",
+}: {
+  verifiedAccount?: string;
+}) {
   const [proxy, setProxy] = useState(DEFAULT_PROXY);
-  const [account, setAccount] = useState("");
+  const [account, setAccount] = useState(verifiedAccount);
   const [config, setConfig] = useState<Config | null>(null);
   const [serviceFee, setServiceFee] = useState("0.0013");
   const [deposit, setDeposit] = useState("13");
@@ -74,6 +90,9 @@ export function UpgradeableOwnerPanel() {
   const [feeWallet, setFeeWallet] = useState("");
   const [status, setStatus] = useState("ยังไม่ได้อ่าน Proxy");
   const [busy, setBusy] = useState(false);
+  const [auditBusy, setAuditBusy] = useState(false);
+  const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [auditError, setAuditError] = useState("");
   const readProvider = useMemo(() => new JsonRpcProvider(RPC_URL, 97), []);
 
   function assertProxy() {
@@ -133,12 +152,82 @@ export function UpgradeableOwnerPanel() {
       setMaxBatch(next.maxBatch);
       setFeeWallet(next.feeWallet);
       setStatus("อ่านข้อมูล Proxy สำเร็จ — read-only");
+      void readAudit();
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : "อ่าน Proxy ไม่สำเร็จ"
       );
     } finally {
       setBusy(false);
+    }
+  }
+  async function readAudit() {
+    try {
+      setAuditBusy(true);
+      setAuditError("");
+      const latest = await readProvider.getBlockNumber();
+      // Public BSC RPCs rate-limit wide eth_getLogs queries; keep this bounded.
+      const fromBlock = Math.max(0, latest - 1_000);
+      const c = new Contract(proxy, ABI, readProvider) as any;
+      const feeEvents = await c.queryFilter(
+        c.filters.ServiceFeeUpdated(),
+        fromBlock,
+        latest
+      );
+      const depositEvents = await c.queryFilter(
+        c.filters.DepositAmountUpdated(),
+        fromBlock,
+        latest
+      );
+      const maxEvents = await c.queryFilter(
+        c.filters.MaxFundTicketsUpdated(),
+        fromBlock,
+        latest
+      );
+      const walletEvents = await c.queryFilter(
+        c.filters.FeeWalletUpdated(),
+        fromBlock,
+        latest
+      );
+      const decimals = config?.decimals ?? 18;
+      const rows: AuditEntry[] = [
+        ...feeEvents.map((event: any) => ({
+          type: "Service fee" as const,
+          oldValue: `${formatEther(event.args[0])} BNB`,
+          newValue: `${formatEther(event.args[1])} BNB`,
+          txHash: event.transactionHash,
+          blockNumber: Number(event.blockNumber),
+        })),
+        ...depositEvents.map((event: any) => ({
+          type: "Deposit amount" as const,
+          oldValue: `${formatUnits(event.args[0], decimals)} USDT`,
+          newValue: `${formatUnits(event.args[1], decimals)} USDT`,
+          txHash: event.transactionHash,
+          blockNumber: Number(event.blockNumber),
+        })),
+        ...maxEvents.map((event: any) => ({
+          type: "Max fund tickets" as const,
+          oldValue: String(event.args[0]),
+          newValue: String(event.args[1]),
+          txHash: event.transactionHash,
+          blockNumber: Number(event.blockNumber),
+        })),
+        ...walletEvents.map((event: any) => ({
+          type: "Fee wallet" as const,
+          oldValue: short(event.args[0]),
+          newValue: short(event.args[1]),
+          txHash: event.transactionHash,
+          blockNumber: Number(event.blockNumber),
+        })),
+      ].sort((a, b) => b.blockNumber - a.blockNumber);
+      setAudit(rows.slice(0, 50));
+    } catch (error) {
+      setAudit([]);
+      setAuditError(
+        error instanceof Error ? error.message : "อ่าน event history ไม่สำเร็จ"
+      );
+    } finally {
+      setAuditBusy(false);
     }
   }
   async function send(label: string, call: (c: Contract) => Promise<any>) {
@@ -159,6 +248,9 @@ export function UpgradeableOwnerPanel() {
       setBusy(false);
     }
   }
+  useEffect(() => {
+    setAccount(verifiedAccount);
+  }, [verifiedAccount]);
   useEffect(() => {
     void readConfig();
   }, []);
@@ -321,6 +413,88 @@ export function UpgradeableOwnerPanel() {
           </div>
         </div>
       )}
+      <section
+        className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white"
+        aria-label="Fee change audit history"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 p-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">
+              Parameter change history
+            </h3>
+            <p className="mt-1 text-[11px] text-slate-500">
+              อ่านจาก events บน Proxy · แสดงสูงสุด 50 รายการล่าสุดใน 1,000
+              blocks
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void readAudit()}
+            disabled={auditBusy}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-700 hover:border-violet-300 hover:text-violet-700 disabled:opacity-50"
+          >
+            {auditBusy ? (
+              <Loader2 size={13} className="mr-1 inline animate-spin" />
+            ) : null}{" "}
+            Refresh history
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px] text-left text-xs">
+            <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Parameter</th>
+                <th className="px-4 py-3">Previous</th>
+                <th className="px-4 py-3">New</th>
+                <th className="px-4 py-3">Block</th>
+                <th className="px-4 py-3">Receipt</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {audit.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-6 text-center text-slate-400"
+                  >
+                    {auditBusy
+                      ? "กำลังอ่าน event history…"
+                      : auditError ||
+                        "ยังไม่พบการเปลี่ยนค่าในช่วง 1,000 blocks ล่าสุด"}
+                  </td>
+                </tr>
+              ) : (
+                audit.map(row => (
+                  <tr key={`${row.txHash}-${row.type}`}>
+                    <td className="px-4 py-3 font-semibold text-slate-700">
+                      {row.type}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-slate-500">
+                      {row.oldValue}
+                    </td>
+                    <td className="px-4 py-3 font-mono font-semibold text-slate-800">
+                      {row.newValue}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-slate-500">
+                      {row.blockNumber}
+                    </td>
+                    <td className="px-4 py-3">
+                      <a
+                        href={`${EXPLORER}/tx/${row.txHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline"
+                      >
+                        View receipt <ExternalLink size={12} />
+                      </a>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
       <div className="mt-4 rounded-xl border border-violet-200 bg-white p-4">
         <p className="text-xs font-semibold text-violet-900">
           Owner parameter controls
