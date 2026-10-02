@@ -2,18 +2,22 @@
 
 ## Current status
 
-- Proxy deployment: **PENDING — no MetaMask transaction was sent from this Sandbox**
+- Implementation deployment: **SUCCESS — receipt verified on BSC Testnet**
+- Proxy deployment: **PENDING — ERC1967Proxy source is ready for Remix**
 - Network: BNB Smart Chain Testnet, chain ID `97`
 - Initial owner: `0x11B948575B648be50Eef781251ebdc876907E618`
-- Asset: use the verified BSC Testnet BEP-20 token selected for this project; do not substitute a Mainnet address
-- Fee wallet: use the approved fee wallet and verify it character-by-character
+- Asset: `0x337610d27c682e347c9cd60bd4b3b107c9d34ddd` (verified BSC Testnet token; decimals must be read by initializer)
+- Fee wallet: `0xE465e694E9194b848D597b21ce4104f9C36Fc6d2`
 
 ## Deploy sequence in Remix
 
-1. Import `Transparent13VTQueueUpgradeable.sol` and compile with Solidity `0.8.24`, optimizer `200`, OpenZeppelin `5.4.0`.
+1. Import `Transparent13VTQueueUpgradeable.sol` and `ERC1967Proxy.flattened.sol`; compile with Solidity `0.8.24`, optimizer `200`.
 2. Select **Injected Provider - MetaMask**, switch MetaMask to BNB Smart Chain Testnet (`97`).
-3. Deploy `Transparent13VTQueueUpgradeable` implementation. Do not call `initialize` on the implementation address.
-4. ABI-encode `initialize(asset_, feeWallet_, 0x11B948575B648be50Eef781251ebdc876907E618)`.
+3. Implementation is already deployed at `0xf9871427ebf78597f4e1844f8bb7ac8e6496bdc0`; do not call `initialize` on the implementation address.
+   - Tx: `0x4096f7401cca444b1a553a5eff55ed6120198bba1153d7727d2e2dc897bd5ff4`
+   - Receipt: status `1`, block `134374203`, bytecode `14,353` bytes.
+4. ABI-encode `initialize(asset_, feeWallet_, 0x11B948575B648be50Eef781251ebdc876907E618)` using:
+   `0xc0c53b8b000000000000000000000000337610d27c682e347c9cd60bd4b3b107c9d34ddd000000000000000000000000e465e694e9194b848d597b21ce4104f9c36fc6d200000000000000000000000011b948575b648be50eef781251ebdc876907e618`
 5. Deploy OpenZeppelin `ERC1967Proxy(implementationAddress, initializerCalldata)`.
 6. Interact with the **Proxy address** using the `Transparent13VTQueueUpgradeable` ABI.
 7. Read and record `owner()`, `asset()`, `assetDecimals()`, `depositAmount()`, `serviceFeeWei()`, `maxFundTickets()`, and `feeWallet()`.
@@ -25,12 +29,12 @@
 
 | Field | Value |
 |---|---|
-| Implementation address | `PENDING` |
-| Implementation deploy tx | `PENDING` |
+| Implementation address | `0xf9871427ebf78597f4e1844f8bb7ac8e6496bdc0` |
+| Implementation deploy tx | `0x4096f7401cca444b1a553a5eff55ed6120198bba1153d7727d2e2dc897bd5ff4` |
 | Proxy address | `PENDING` |
 | Proxy deploy tx | `PENDING` |
 | Proxy receipt status | `PENDING` |
-| Initializer calldata | `PENDING` |
+| Initializer calldata | `0xc0c53b8b000000000000000000000000337610d27c682e347c9cd60bd4b3b107c9d34ddd000000000000000000000000e465e694e9194b848d597b21ce4104f9c36fc6d200000000000000000000000011b948575b648be50eef781251ebdc876907e618` |
 | Owner readback | `PENDING` |
 | Implementation slot readback | `PENDING` |
 | BscScan verification URLs | `PENDING` |
