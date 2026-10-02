@@ -39,11 +39,13 @@ DB_PASSWORD=<hex-48-characters-generated-locally>
 MYSQL_ROOT_PASSWORD=<a-different-hex-48-characters>
 JWT_SECRET=<hex-64-characters-generated-locally>
 ONCHAIN_OWNER_WALLET=0x<40-hex-character-address-you-control>
+TESTNET_UPGRADEABLE_PROXY_ADDRESS=0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE
 ```
 
 - `SITE_DOMAIN` เป็น hostname อย่างเดียว ไม่มี `https://` หรือ `/` และ DNS ต้องชี้มายัง VPS; ไม่ต้องมี `www` หากไม่ได้ตั้ง DNS/เพิ่ม Caddy site สำหรับมัน
 - `DB_PASSWORD` และ `MYSQL_ROOT_PASSWORD` **คนละค่า**; ระบบใช้ user `queue`, DB `onchain_queue` และ URL `mysql://queue:<DB_PASSWORD>@db:3306/onchain_queue` **ภายใน Docker** เท่านั้น. ใช้ hex เพื่อไม่ต้อง URL-encode `$`, `@`, `#`, `:`; ห้ามนำค่า `DATABASE_URL`/`JWT_SECRET` ของโปรเจ็กต์ Manus มาใช้ซ้ำ
 - `JWT_SECRET` เซ็น session; เปลี่ยนค่าแล้ว session เดิมใช้ไม่ได้. `ONCHAIN_OWNER_WALLET` คือกระเป๋าที่ควบคุมจริงและจะใช้ลงลายเซ็น SIWE (ไม่ใช่คีย์ส่วนตัว). ค่านี้เป็น **address สาธารณะ** ที่ส่งเป็น `VITE_ONCHAIN_OWNER_WALLET` ระหว่าง build เว็บ และเป็นค่า backend runtime; เปลี่ยน address แล้วต้อง `docker compose build app && docker compose up -d app` เพื่อให้หน้าเว็บตรงกับ backend
+- `TESTNET_UPGRADEABLE_PROXY_ADDRESS` เป็น address สาธารณะของ UUPS Proxy บน BSC Testnet; Compose จะส่งค่าเดียวกันเป็น `VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS` และ `VITE_TESTNET_QUEUE_ADDRESS` ระหว่าง build. ค่าอ้างอิงที่ตรวจแล้วปัจจุบันคือ `0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE`; ห้ามใส่ private key หรือ address ของ Implementation แทน Proxy
 - ห้ามเก็บ seed phrase, private key, token API หรือ `.env` ใน GitHub/แชต; ให้เก็บ backup ความลับภายนอกรีโปโดยสิทธิ์จำกัด. `.env` ไม่ถูก track โดย `.gitignore` และถูกตัดออกจาก Docker build context
 - ตรวจค่าโดยไม่แสดงความลับ: `python3 check-env.py .env`; หาก parser แจ้งข้อผิดพลาด ให้แก้ก่อน. `docker compose config --quiet` ตรวจไวยากรณ์โดยไม่พิมพ์ค่าที่ interpolate; **อย่าใช้ `docker compose config` โดยไม่ใส่ `--quiet` แล้วแชร์ผล**
 

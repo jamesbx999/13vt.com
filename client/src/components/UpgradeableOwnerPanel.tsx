@@ -17,7 +17,7 @@ const IMPLEMENTATION_SLOT =
   "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC";
 const DEFAULT_PROXY =
   import.meta.env.VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS ||
-  "0x0425713b812d99b8a377b760424ba80156a6fbd1";
+  "0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE";
 const ABI = [
   "function owner() view returns (address)",
   "function asset() view returns (address)",

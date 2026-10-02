@@ -29,6 +29,8 @@ services:
       dockerfile: deploy/vps/Dockerfile
       args:
         VITE_ONCHAIN_OWNER_WALLET: ${ONCHAIN_OWNER_WALLET:?Set ONCHAIN_OWNER_WALLET in deploy/vps/.env}
+        VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS: ${TESTNET_UPGRADEABLE_PROXY_ADDRESS:?Set TESTNET_UPGRADEABLE_PROXY_ADDRESS in deploy/vps/.env}
+        VITE_TESTNET_QUEUE_ADDRESS: ${TESTNET_UPGRADEABLE_PROXY_ADDRESS:?Set TESTNET_UPGRADEABLE_PROXY_ADDRESS in deploy/vps/.env}
     restart: unless-stopped
     environment:
       NODE_ENV: production

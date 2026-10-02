@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { BrowserProvider, Contract, JsonRpcProvider, formatUnits, parseEther, parseUnits } from "ethers";
+import { BrowserProvider, Contract, JsonRpcProvider, formatEther, formatUnits, parseEther, parseUnits } from "ethers";
 import { CheckCircle2, ExternalLink, Loader2, ShieldCheck, Wallet } from "lucide-react";
 
 const CHAIN_ID = BigInt(97);
 const RPC_URL = "https://bsc-testnet-dataseed.bnbchain.org";
 const EXPLORER = "https://testnet.bscscan.com";
-const DEFAULT_QUEUE = "0x6575a3319271d1a2fc269b161ab57ed465103838";
+const DEFAULT_QUEUE = import.meta.env.VITE_TESTNET_UPGRADEABLE_PROXY_ADDRESS || "0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE";
 
 declare global { interface Window { ethereum?: any } }
 
@@ -13,7 +13,8 @@ const QUEUE_ABI = [
   "function asset() view returns (address)",
   "function assetDecimals() view returns (uint8)",
   "function depositAmount() view returns (uint256)",
-  "function MAX_FUND_TICKETS() view returns (uint256)",
+  "function maxFundTickets() view returns(uint256)",
+  "function serviceFeeWei() view returns(uint256)",
   "function feeWallet() view returns (address)",
   "function totalClaimed() view returns (uint256)",
   "function totalReborn() view returns (uint256)",
@@ -30,7 +31,7 @@ const QUEUE_ABI = [
 ];
 const ERC20_ABI = ["function approve(address spender, uint256 amount) returns (bool)", "function allowance(address owner, address spender) view returns (uint256)", "function decimals() view returns (uint8)", "function symbol() view returns (string)"];
 
-type ReadState = { asset: string; feeWallet: string; decimals: number; depositAmount: string; maxFundTickets: string; totalClaimed: string; totalReborn: string; nextTicketId: string; registered: string; waiting: string; scheduled: string; balance: string };
+type ReadState = { asset: string; feeWallet: string; decimals: number; depositAmount: string; serviceFeeWei: string; maxFundTickets: string; totalClaimed: string; totalReborn: string; nextTicketId: string; registered: string; waiting: string; scheduled: string; balance: string };
 
 function short(value: string) { return value ? `${value.slice(0, 6)}…${value.slice(-4)}` : "—"; }
 function isAddress(value: string) { return /^0x[a-fA-F0-9]{40}$/.test(value); }
@@ -66,11 +67,12 @@ export function EthersFifoTestnetPanel() {
       assertQueue(); setBusy(true); setStatus("กำลังอ่านข้อมูลจาก BSC Testnet…");
       const queue = new Contract(queueAddress, QUEUE_ABI, readProvider);
       const [asset, feeWallet, totalClaimed, totalReborn, nextTicketId, snapshot] = await Promise.all([queue.asset(), queue.feeWallet(), queue.totalClaimed(), queue.totalReborn(), queue.nextTicketId(), queue.queueState()]);
-      const [decimalsResult, depositResult, maxBatchResult] = await Promise.allSettled([queue.assetDecimals(), queue.depositAmount(), queue.MAX_FUND_TICKETS()]);
+      const [decimalsResult, depositResult, feeResult, maxBatchResult] = await Promise.allSettled([queue.assetDecimals(), queue.depositAmount(), queue.serviceFeeWei(), queue.maxFundTickets()]);
       const decimals = decimalsResult.status === "fulfilled" ? Number(decimalsResult.value) : 18;
       const depositAmount = depositResult.status === "fulfilled" ? depositResult.value : parseUnits("13", decimals);
+      const serviceFeeWei = feeResult.status === "fulfilled" ? feeResult.value : parseEther("0.0013");
       const maxFundTickets = maxBatchResult.status === "fulfilled" ? maxBatchResult.value : BigInt(50);
-      setState({ asset, feeWallet, decimals, depositAmount: formatUnits(depositAmount, decimals), maxFundTickets: String(maxFundTickets), totalClaimed: formatUnits(totalClaimed, decimals), totalReborn: String(totalReborn), nextTicketId: String(nextTicketId), registered: String(snapshot.registered), waiting: String(snapshot.waiting), scheduled: formatUnits(snapshot.scheduled, decimals), balance: formatUnits(snapshot.balance, decimals) });
+      setState({ asset, feeWallet, decimals, depositAmount: formatUnits(depositAmount, decimals), serviceFeeWei: formatEther(serviceFeeWei), maxFundTickets: String(maxFundTickets), totalClaimed: formatUnits(totalClaimed, decimals), totalReborn: String(totalReborn), nextTicketId: String(nextTicketId), registered: String(snapshot.registered), waiting: String(snapshot.waiting), scheduled: formatUnits(snapshot.scheduled, decimals), balance: formatUnits(snapshot.balance, decimals) });
       setStatus("อ่านข้อมูลสำเร็จ — read-only");
     } catch (error) { setStatus(error instanceof Error ? error.message : "อ่านข้อมูลไม่สำเร็จ"); }
     finally { setBusy(false); }
@@ -81,7 +83,7 @@ export function EthersFifoTestnetPanel() {
     finally { setBusy(false); }
   }
   const approve = () => send("Approve token", async (signer) => { if (!state) throw new Error("อ่าน Contract state ก่อน"); const token = new Contract(state.asset, ERC20_ABI, signer); return token.approve(queueAddress, parseUnits(amount, state.decimals)); });
-  const register = () => send("Register position", async (signer) => new Contract(queueAddress, QUEUE_ABI, signer).registerPosition(recipient || account, { value: parseEther("0.0013") }));
+  const register = () => send("Register position", async (signer) => new Contract(queueAddress, QUEUE_ABI, signer).registerPosition(recipient || account, { value: parseEther(state?.serviceFeeWei || "0.0013") }));
   const fund = () => send("Fund FIFO", async (signer) => { if (!state) throw new Error("อ่าน Contract state ก่อน"); if (BigInt(recipientCount) > BigInt(state.maxFundTickets)) throw new Error(`recipientCount ต้องไม่เกิน ${state.maxFundTickets}`); return new Contract(queueAddress, QUEUE_ABI, signer).fundNext(parseUnits(amount, state.decimals), BigInt(recipientCount)); });
   const claim = () => send("Claim ticket", async (signer) => new Contract(queueAddress, QUEUE_ABI, signer).claim(BigInt(ticketId)));
   const reborn = () => send("Create Reborn position", async (signer) => new Contract(queueAddress, QUEUE_ABI, signer).createRebornPosition(BigInt(parentId)));

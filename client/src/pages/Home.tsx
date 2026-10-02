@@ -2072,20 +2072,12 @@ export default function Home() {
                       </code>
                     </div>
                     <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                      <span className="text-slate-500">Stake Required</span>
-                      <span className="font-bold text-slate-800">
-                        {referralStatus && snapshot
-                          ? `${formatToken(referralStatus.requiredStake, snapshot.decimals)} ${snapshot.symbol}`
-                          : "10 USDT*"}
-                      </span>
+                      <span className="text-slate-500">Deposit Required</span>
+                      <span className="font-bold text-slate-800">13 USDT</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-slate-500">Stake Fee</span>
-                      <span className="font-bold text-teal-700">
-                        {referralStatus && snapshot
-                          ? `${formatToken(referralStatus.feeAmount, snapshot.decimals)} ${snapshot.symbol}`
-                          : "0.15%*"}
-                      </span>
+                      <span className="text-slate-500">Service Fee</span>
+                      <span className="font-bold text-teal-700">0.0013 BNB</span>
                     </div>
                   </div>
                   <div className="mt-4 rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-600">
@@ -2111,27 +2103,15 @@ export default function Home() {
                       </span>
                     </div>
                   </div>
-                  {referralStatus &&
-                    account &&
-                    !referralStatus.walletEligible && (
-                      <Button
-                        onClick={() => {
-                          setStakeError("");
-                          setStakeOpen(true);
-                        }}
-                        className="mt-4 w-full rounded-xl bg-teal-600 text-white hover:bg-teal-700"
-                      >
-                        <Wallet size={15} /> Stake 10 USDT + fee
-                      </Button>
-                    )}
                   {referralStatusError && (
                     <p className="mt-3 text-[11px] leading-4 text-rose-700">
                       {referralStatusError}
                     </p>
                   )}
                   <p className="mt-3 text-[10px] leading-4 text-slate-400">
-                    * ค่า Preview จะแทนที่ด้วยค่าจริงเมื่ออ่าน Contract
-                    ฉบับใหม่สำเร็จ
+                    กฎปัจจุบัน: สมาชิกฝาก 13 USDT และส่งค่าบริการ 0.0013 BNB
+                    ให้ Contract ตรวจสอบตามเครือข่ายที่เลือก; ค่า Referral/Stake
+                    รุ่นเก่าไม่ใช่กฎของ 13VT
                   </p>
                 </section>
                 <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.04)]">

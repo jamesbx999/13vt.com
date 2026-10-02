@@ -59,7 +59,7 @@ EXECUTE_DEPLOY=YES npm run deploy:testnet
 ## 6. Preview และ Upgrade Proxy เดิม
 
 ```bash
-PROXY_ADDRESS=0x0425713b812d99b8a377b760424ba80156a6fbd1 \
+PROXY_ADDRESS=0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE \
   EXECUTE_UPGRADE=NO npm run upgrade:testnet
 ```
 
@@ -68,7 +68,7 @@ PROXY_ADDRESS=0x0425713b812d99b8a377b760424ba80156a6fbd1 \
 หลังตรวจ source, bytecode, storage layout และ payload แล้วเท่านั้น:
 
 ```bash
-PROXY_ADDRESS=0x0425713b812d99b8a377b760424ba80156a6fbd1 \
+PROXY_ADDRESS=0x3a358d2151b0aD8adB9f8C218bD2B268d53654eE \
   EXECUTE_UPGRADE=YES npm run upgrade:testnet
 ```
 
