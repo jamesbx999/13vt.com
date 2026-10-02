@@ -51,6 +51,7 @@ import {
   readReferralStatus,
   readReferralPathEvents,
   readDirectReferralCount,
+  readTicketStatus,
   readQueueSnapshot,
   shortAddress,
   buildSignInMessage,
@@ -455,6 +456,7 @@ export default function Home() {
     recipient: string;
   } | null>(null);
   const [claiming, setClaiming] = useState(false);
+  const [claimOneLoading, setClaimOneLoading] = useState(false);
   const [claimTxHash, setClaimTxHash] = useState("");
   const [claimStatus, setClaimStatus] = useState<TxStatus>("idle");
 
@@ -1129,6 +1131,7 @@ export default function Home() {
     if (!snapshot) return DEMO_ROWS;
     return snapshot.tickets.map(ticket => ({
       id: ticket.id,
+      rawAmount: ticket.amount,
       recipient: shortAddress(ticket.recipient),
       amount:
         ticket.amount === "0"
@@ -1196,6 +1199,7 @@ export default function Home() {
   function openClaim(ticket: {
     id: number;
     amount: string;
+    rawAmount?: string;
     recipient?: string;
     isOwner?: boolean;
   }) {
@@ -1226,10 +1230,47 @@ export default function Home() {
     setGasEstimateError("");
     setClaimTicket({
       id: ticket.id,
-      amount: formatToken(ticket.amount, snapshot.decimals),
+      amount: formatToken(ticket.rawAmount ?? ticket.amount, snapshot.decimals),
       symbol: snapshot.symbol,
       recipient: ticket.recipient,
     });
+  }
+
+  async function openClaimTicketOne() {
+    if (!provider || !account) {
+      toast.info("เชื่อมต่อกระเป๋าก่อน Claim", {
+        description: "ต้องใช้ Wallet ของ Recipient เพื่อเรียก claim(1)",
+      });
+      return;
+    }
+    setClaimOneLoading(true);
+    try {
+      const ticket = await readTicketStatus(provider, contractAddress, "1");
+      if (ticket.recipient.toLowerCase() !== account.toLowerCase()) {
+        throw new Error(
+          `Wallet ปัจจุบันไม่ใช่ Recipient ของ Ticket #1 (${shortAddress(ticket.recipient)})`
+        );
+      }
+      if (ticket.claimed) {
+        throw new Error("Ticket #1 ถูก Claim ไปแล้ว");
+      }
+      if (ticket.amount === "0") {
+        throw new Error("Ticket #1 ยังไม่ Funded จึงยัง Claim ไม่ได้");
+      }
+      openClaim({
+        id: 1,
+        amount: ticket.amount,
+        rawAmount: ticket.amount,
+        recipient: ticket.recipient,
+        isOwner: true,
+      });
+    } catch (claimOneError: any) {
+      toast.error("เปิด Claim Ticket #1 ไม่สำเร็จ", {
+        description: claimOneError?.message || "อ่านสถานะ Ticket ไม่สำเร็จ",
+      });
+    } finally {
+      setClaimOneLoading(false);
+    }
   }
 
   async function confirmClaim() {
@@ -1832,6 +1873,33 @@ export default function Home() {
                 กำลังอ่านข้อมูลจาก BNB Smart Chain…
               </p>
             )}
+
+            <section className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-[0_12px_40px_rgba(16,185,129,0.08)] sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="text-emerald-700" size={18} />
+                  <h2 className="font-bold tracking-tight text-emerald-950">
+                    Claim Ticket #1
+                  </h2>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-emerald-900/70">
+                  อ่านสถานะ Ticket #1 จาก Proxy ก่อนเปิดหน้าต่างยืนยัน แล้วเรียก <code className="rounded bg-white/70 px-1 py-0.5 font-mono">claim(1)</code> ผ่าน Wallet ของ Recipient
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => void openClaimTicketOne()}
+                disabled={claimOneLoading || claiming || !snapshot}
+                className="shrink-0 gap-2 rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {claimOneLoading ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <ArrowUpRight size={16} />
+                )}
+                {claimOneLoading ? "กำลังอ่าน Ticket #1" : "เรียก claim(1)"}
+              </Button>
+            </section>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
               <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
