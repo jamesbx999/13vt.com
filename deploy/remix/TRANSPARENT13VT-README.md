@@ -7,9 +7,12 @@
 - `registerPosition(recipient)` รับ token deposit คงที่ 13 token units และเก็บ fee exact `0.0013 BNB` ในธุรกรรมเดียว
 - `fundNext(amount, recipientCount)` รับเงินทุนภายนอกและจัดสรรให้ ticket ที่รออยู่ตาม `ticketId` FIFO
 - `claim(ticketId)` ให้ผู้รับดึงยอดของตนเอง โดย state ถูก commit ก่อน token transfer
+- `createRebornPosition(parentId)` สร้าง successor ได้ครั้งเดียวหลัง parent ถูก Claim สำเร็จ และ emit `Reborn(parentId, successorId, recipient)`; successor เริ่มต้นด้วยยอด 0/ยังไม่มีทุน
 - ตรวจยอด token ที่เข้า contract ด้วย balance delta เพื่อปฏิเสธ fee-on-transfer/rebase behavior ที่ยอดไม่ตรง
 - ใช้ `nonReentrant` กับฟังก์ชันที่ทำ external token/BNB call
 - ไม่มี owner sweep, referral tree, automatic Reborn, mint, guaranteed return หรือ hidden routing
+
+> `createRebornPosition` เป็นการสร้าง Position ต่อแบบ explicit ไม่ใช่ automatic payout, ไม่สร้าง token/BNB และไม่ใช่หลักฐานผลตอบแทนหรือการรับประกันรายได้
 
 ## สิ่งที่ไม่มีโดยตั้งใจ
 

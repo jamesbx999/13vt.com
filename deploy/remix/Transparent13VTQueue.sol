@@ -23,6 +23,7 @@ contract Transparent13VTQueue is ReentrancyGuard {
     uint256 public nextUnfundedTicketId = 1;
     uint256 public totalScheduled;
     uint256 public totalClaimed;
+    mapping(uint256 => uint256) public rebornOf;
 
     struct Ticket {
         address recipient;
@@ -46,6 +47,8 @@ contract Transparent13VTQueue is ReentrancyGuard {
     error NoFundedTicket();
     error TransferAmountMismatch();
     error FeeTransferFailed();
+    error RebornNotEligible();
+    error RebornAlreadyCreated();
 
     event Registered(
         uint256 indexed ticketId,
@@ -62,6 +65,7 @@ contract Transparent13VTQueue is ReentrancyGuard {
         address indexed funder
     );
     event Claimed(uint256 indexed ticketId, address indexed recipient, uint256 amount);
+    event Reborn(uint256 indexed parentId, uint256 indexed successorId, address indexed recipient);
 
     constructor(IERC20 asset_, address payable feeWallet_) {
         if (address(asset_) == address(0)) revert InvalidAsset();
@@ -141,6 +145,21 @@ contract Transparent13VTQueue is ReentrancyGuard {
         totalClaimed += amount;
         asset.safeTransfer(msg.sender, amount);
         emit Claimed(ticketId, msg.sender, amount);
+    }
+
+    /// @notice Explicit, unfunded successor for a claimed ticket. No token or BNB is created.
+    ///         This event is evidence of a new Position only; it is not a payout or guarantee.
+    function createRebornPosition(uint256 parentId)
+        external
+        nonReentrant
+        returns (uint256 successorId)
+    {
+        Ticket storage parent = tickets[parentId];
+        if (parent.recipient == address(0) || !parent.claimed) revert RebornNotEligible();
+        if (rebornOf[parentId] != 0) revert RebornAlreadyCreated();
+        rebornOf[parentId] = successorId = nextTicketId++;
+        tickets[successorId] = Ticket({recipient: parent.recipient, amount: 0, claimed: false});
+        emit Reborn(parentId, successorId, parent.recipient);
     }
 
     function queueState()
