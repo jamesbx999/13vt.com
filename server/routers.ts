@@ -22,6 +22,7 @@ import {
   SIWE_TTL_MS,
 } from "./siwe";
 import { getTestnetTokenInfo, inspectTestnetTransfer } from "./testnetToken";
+import { verifyImplementation, verifyProxy } from "./bscscan";
 
 const walletSchema = z
   .string()
@@ -179,6 +180,26 @@ export const appRouter = router({
           txHash: input.txHash ?? null,
         })
       ),
+  }),
+  bscscan: router({
+    verifyImplementation: ownerWalletProcedure
+      .input(
+        z.object({
+          contractAddress: walletSchema,
+          sourceCode: z.string().min(100).max(1_500_000),
+          contractName: z.string().trim().min(1).max(255),
+          compilerVersion: z.string().trim().regex(/^v?0\.8\.24\+commit\.[a-f0-9]+$/i),
+          optimizationUsed: z.enum(["0", "1"]),
+          runs: z.number().int().min(0).max(1_000_000),
+          constructorArguments: z.string().trim().regex(/^[a-fA-F0-9]*$/).max(10_000).optional(),
+          evmVersion: z.string().trim().max(32).optional(),
+          licenseType: z.string().trim().max(8).optional(),
+        })
+      )
+      .mutation(({ input }) => verifyImplementation(input)),
+    verifyProxy: ownerWalletProcedure
+      .input(z.object({ proxyAddress: walletSchema }))
+      .mutation(({ input }) => verifyProxy(input.proxyAddress)),
   }),
 });
 

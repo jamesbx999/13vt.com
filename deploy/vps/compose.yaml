@@ -41,6 +41,7 @@ services:
       DATABASE_URL: mysql://queue:${DB_PASSWORD:?Set DB_PASSWORD in deploy/vps/.env}@db:3306/onchain_queue
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in deploy/vps/.env}
       ONCHAIN_OWNER_WALLET: ${ONCHAIN_OWNER_WALLET:?Set ONCHAIN_OWNER_WALLET in deploy/vps/.env}
+      BSCSCAN_API_KEY: ${BSCSCAN_API_KEY:?Set BSCSCAN_API_KEY in deploy/vps/.env}
     depends_on:
       db:
         condition: service_healthy
