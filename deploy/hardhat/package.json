@@ -1,0 +1,18 @@
+{
+  "name": "13vt-hardhat-deployment",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:testnet": "hardhat run scripts/deploy.cjs --network bscTestnet",
+    "upgrade:testnet": "hardhat run scripts/upgrade.cjs --network bscTestnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@openzeppelin/contracts": "5.4.0",
+    "@openzeppelin/contracts-upgradeable": "5.4.0",
+    "dotenv": "^17.2.2",
+    "ethers": "^6.15.0",
+    "hardhat": "^2.26.3"
+  }
+}
