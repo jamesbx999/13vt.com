@@ -60,6 +60,7 @@ import {
 import { LanguageSwitcher, useLanguage } from "@/contexts/LanguageContext";
 import { useTransactionJournal } from "@/contexts/TransactionJournalContext";
 import { TestnetTransferPanel } from "@/components/TestnetTransferPanel";
+import { FeeSimulationPanel } from "@/components/FeeSimulationPanel";
 import {
   errorOutcome,
   isBscMainnet,
@@ -2413,6 +2414,7 @@ export default function Home() {
             </section>
 
             <TestnetTransferPanel />
+            <FeeSimulationPanel />
 
             <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
               <div className="flex flex-col gap-4 border-b border-slate-100 p-5">
