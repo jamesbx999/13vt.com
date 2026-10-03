@@ -6,7 +6,7 @@
 
 ```bash
 cd deploy/hardhat
-pnpm install
+npm install
 pnpm exec hardhat compile
 pnpm exec hardhat run scripts/testnet-flow.cjs
 ```
