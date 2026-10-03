@@ -1,5 +1,5 @@
 import { AlertTriangle, Database, RefreshCw, ShieldCheck } from "lucide-react";
-import { Contract, JsonRpcProvider, formatUnits } from "ethers";
+import { Contract, Interface, JsonRpcProvider, formatUnits } from "ethers";
 import { useCallback, useEffect, useState } from "react";
 
 const RPC_URL = "https://bsc-rpc.publicnode.com";
@@ -14,6 +14,7 @@ const ACCOUNTING_ABI = [
   "function accountingInitialized() view returns (bool)",
   "function totalScheduled() view returns (uint256)",
   "function totalClaimed() view returns (uint256)",
+  "event AutoPaid(uint256 indexed ticketId, address indexed recipient, uint256 amount, address indexed funder)",
 ];
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
@@ -34,6 +35,9 @@ type Snapshot = {
   scheduled: bigint;
   claimed: bigint;
   initialized: boolean;
+  autoPaidCount: number;
+  lastAutoPaid: { ticketId: bigint; recipient: string; amount: bigint } | null;
+  blockNumber: number;
 };
 
 function shortAddress(value: string) {
@@ -61,6 +65,7 @@ export function V3AccountingPanel({ proxy, verifiedAccount }: Props) {
     try {
       const provider = new JsonRpcProvider(RPC_URL, 56);
       const queue = new Contract(proxy, ACCOUNTING_ABI, provider);
+      const latestBlock = await provider.getBlockNumber();
       const [asset, decimalsRaw, historicalDeposits, fundedUnclaimed, claimable, reserved, surplus, initialized, scheduled, claimed] = await Promise.all([
         queue.asset(),
         queue.assetDecimals(),
@@ -75,6 +80,32 @@ export function V3AccountingPanel({ proxy, verifiedAccount }: Props) {
       ]);
       const token = new Contract(asset, ERC20_ABI, provider);
       const [symbol, balance] = await Promise.all([token.symbol().catch(() => "TOKEN"), token.balanceOf(proxy)]);
+      const eventInterface = new Interface(ACCOUNTING_ABI);
+      const autoPaidTopic = eventInterface.getEvent("AutoPaid")?.topicHash;
+      const logs = autoPaidTopic
+        ? await provider.getLogs({
+            address: proxy,
+            topics: [autoPaidTopic],
+            fromBlock: Math.max(0, latestBlock - 10_000),
+            toBlock: latestBlock,
+          })
+        : [];
+      const decoded = logs
+        .map(log => {
+          try {
+            const parsed = eventInterface.parseLog(log);
+            return parsed?.name === "AutoPaid"
+              ? {
+                  ticketId: parsed.args.ticketId as bigint,
+                  recipient: String(parsed.args.recipient),
+                  amount: parsed.args.amount as bigint,
+                }
+              : null;
+          } catch {
+            return null;
+          }
+        })
+        .filter((event): event is NonNullable<typeof event> => event !== null);
       setSnapshot({
         asset,
         symbol,
@@ -88,6 +119,9 @@ export function V3AccountingPanel({ proxy, verifiedAccount }: Props) {
         scheduled,
         claimed,
         initialized,
+        autoPaidCount: decoded.length,
+        lastAutoPaid: decoded.at(-1) ?? null,
+        blockNumber: latestBlock,
       });
     } catch (cause) {
       setSnapshot(null);
@@ -99,6 +133,8 @@ export function V3AccountingPanel({ proxy, verifiedAccount }: Props) {
 
   useEffect(() => {
     void refresh();
+    const timer = window.setInterval(() => void refresh(), 15_000);
+    return () => window.clearInterval(timer);
   }, [refresh]);
 
   return (
@@ -106,11 +142,11 @@ export function V3AccountingPanel({ proxy, verifiedAccount }: Props) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-violet-700">
-            <Database size={15} /> V3 Accounting · Read-only
+            <Database size={15} /> V4 Accounting · Auto Push · Read-only
           </div>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Historical Deposits & Surplus</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            อ่านยอดจาก Smart Contract โดยตรง ยอด Surplus จะเป็นศูนย์จนกว่า Owner จะเรียก initializeAccounting สำเร็จ
+            อ่านยอดและ AutoPaid Event จาก Smart Contract โดยตรง รีเฟรชอัตโนมัติทุก 15 วินาที
           </p>
         </div>
         <button type="button" onClick={() => void refresh()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">
@@ -147,7 +183,9 @@ export function V3AccountingPanel({ proxy, verifiedAccount }: Props) {
             <div className="rounded-2xl bg-emerald-50 p-4"><p className="text-xs text-emerald-700">Accounting status</p><p className="mt-1 flex items-center gap-2 font-bold text-emerald-950"><ShieldCheck size={16} />{snapshot.initialized ? "Initialized" : "Not initialized"}</p></div>
             <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Funded unclaimed</p><p className="mt-1 font-bold text-slate-950">{amount(snapshot.fundedUnclaimed, snapshot.decimals)} {snapshot.symbol}</p></div>
             <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Scheduled / claimed</p><p className="mt-1 font-bold text-slate-950">{amount(snapshot.scheduled, snapshot.decimals)} / {amount(snapshot.claimed, snapshot.decimals)} {snapshot.symbol}</p></div>
+            <div className="rounded-2xl bg-violet-50 p-4"><p className="text-xs text-violet-700">AutoPaid · last 10k blocks</p><p className="mt-1 font-bold text-violet-950">{snapshot.autoPaidCount} events</p>{snapshot.lastAutoPaid && <p className="mt-1 text-xs text-violet-800">Ticket #{snapshot.lastAutoPaid.ticketId.toString()} · {amount(snapshot.lastAutoPaid.amount, snapshot.decimals)} {snapshot.symbol}</p>}</div>
           </div>
+          <p className="mt-3 text-right text-xs text-slate-400">อ่านถึง Block {snapshot.blockNumber.toLocaleString()} · อัปเดตอัตโนมัติทุก 15 วินาที</p>
         </>
       ) : loading ? <p className="mt-6 text-sm text-slate-500">กำลังอ่านข้อมูล V3 Accounting…</p> : null}
     </section>

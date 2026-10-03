@@ -32,6 +32,19 @@ fundNext(13 USDT, 1)
 
 การโอนให้ Recipient อยู่ในธุรกรรมเดียวกับการเติมเงิน ถ้า Token transfer ใดล้มเหลว ธุรกรรมทั้งหมด Revert และไม่ควรมี Ticket ใดถูก Mark เป็น Claimed สำเร็จ
 
+## Error Handling ของ Auto Push
+
+- `InvalidCount` / `BatchTooLarge`: ปฏิเสธจำนวน Ticket ที่เป็นศูนย์หรือเกิน `maxFundTickets`
+- `InvalidAmount`: ปฏิเสธยอดศูนย์หรือยอดที่หารจำนวน Ticket ไม่ลงตัว
+- `NoFundedTicket`: ปฏิเสธเมื่อช่วง Ticket ไม่ใช่ Ticket ที่ลงทะเบียนและยังไม่ถูกจัดสรร
+- `TransferAmountMismatch`: ปฏิเสธ Token ที่โอนเข้าไม่ครบจำนวนที่ประกาศ เช่น Fee-on-transfer Token
+- `SafeERC20FailedOperation` หรือ Revert จาก Token: การโอน Push ให้ Recipient ล้มเหลว ทำให้ `fundNext` ทั้งธุรกรรม Revert
+- `nonReentrant`: ป้องกันการเรียกซ้อนระหว่างการโอน Token
+
+แม้ `_autoPay` จะตั้ง `claimed = true`, ล้าง `amount` และเพิ่ม `totalClaimed` ก่อนเรียก `safeTransfer` แต่ถ้า `safeTransfer` ล้มเหลว EVM จะ Rollback State ทั้งหมดของธุรกรรม จึงไม่เกิดกรณี Mark ว่าจ่ายแล้วแต่เงินไม่ออกจาก Contractภายในธุรกรรมเดียวกัน
+
+V4 จงใจ **ไม่ใช้ `try/catch` แล้วข้าม Ticket ที่โอนไม่สำเร็จ** เพราะจะทำให้ Batch จ่ายไม่ครบและทำให้บัญชี `totalClaimed` กับยอดจริงคลาดเคลื่อน
+
 ## Claim เดิม
 
 `claim(ticketId)` ยังคงอยู่เพื่อรองรับ Ticket ที่ถูกจัดสรรและยังค้างอยู่ก่อน Upgrade V4 แต่ Ticket ที่ถูกเติมผ่าน `fundNext` ของ V4 จะถูกจ่ายไปแล้วและ Claim ซ้ำจะ Revert
