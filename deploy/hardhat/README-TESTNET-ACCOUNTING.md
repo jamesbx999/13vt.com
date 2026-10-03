@@ -65,3 +65,28 @@ Deploy MockUSDT
 ```
 
 `MockUSDT` เป็น Token สำหรับ Testnet เท่านั้น ไม่ใช่ BSC Mainnet USDT และการเชื่อมต่อ Wallet ใน Dashboard Mainnet จะไม่เปลี่ยนไปใช้ Token นี้โดยอัตโนมัติ
+
+## V4 Auto Push Payment: Local Test
+
+V4 เป็น Draft ที่เปลี่ยน `fundNext` ให้จัดสรรและ Push Payment ให้ Recipient ในธุรกรรมเดียว โดยยังคง `claim()` ไว้เป็น fallback สำหรับ Ticket เก่าที่อาจค้างก่อน Upgrade
+
+```bash
+npx hardhat compile
+npx hardhat run scripts/testnet-auto-push-flow.cjs
+```
+
+ผลที่ต้องผ่าน:
+
+```text
+AutoPaid Ticket #1 ใน Transaction เดียวกับ fundNext
+nextUnfundedTicketId = 2
+claim(1) ซ้ำต้อง Revert
+Surplus ก่อนถอน = 13 mUSDT
+Surplus หลังถอน = 0
+```
+
+Source และ Design Note:
+
+- `deploy/hardhat/contracts/Transparent13VTQueueUpgradeableReferralV4AutoPush.sol`
+- `deploy/hardhat/scripts/testnet-auto-push-flow.cjs`
+- `deploy/remix/upgradeable/V4-AUTO-PUSH-DESIGN.md`
