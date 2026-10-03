@@ -13,6 +13,7 @@ import { UpgradeableOwnerPanel } from "@/components/UpgradeableOwnerPanel";
 import { BscScanVerificationPanel } from "@/components/BscScanVerificationPanel";
 import { AdminOperationsPanel } from "@/components/AdminOperationsPanel";
 import { ContractStatusCard } from "@/components/ContractStatusCard";
+import { V3AccountingPanel } from "@/components/V3AccountingPanel";
 import { readReferralStatus, type ReferralStatus } from "@/lib/queue";
 
 const PROXY =
@@ -239,6 +240,8 @@ export default function AdminPage() {
         <div className="mt-6">
           <UpgradeableOwnerPanel verifiedAccount={account} />
         </div>
+
+        <V3AccountingPanel proxy={PROXY} verifiedAccount={account} />
 
         <BscScanVerificationPanel />
 
