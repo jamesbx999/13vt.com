@@ -1,0 +1,53 @@
+{
+ "dur": 45.0,
+ "fps": 30,
+ "bpm": 72,
+ "beat": 0.8333333,
+ "bar": 3.3333333,
+ "hits": {
+  "pinhole": 0.3,
+  "ember": 3.3,
+  "crash": 10.0,
+  "dim": 14.9,
+  "off": 20.0,
+  "back": 23.3333,
+  "flare": 25.0,
+  "relight": 29.3,
+  "rise": 30.0,
+  "moon": 40.0,
+  "title": 40.3,
+  "burns": 41.3
+ },
+ "vo": [
+  {
+   "id": "v01",
+   "t": 1.2,
+   "text": "On the coldest night of winter, a star fell into the mountains."
+  },
+  {
+   "id": "v02",
+   "t": 10.7,
+   "text": "But it was not a star."
+  },
+  {
+   "id": "v03",
+   "t": 12.6,
+   "text": "It was a dragon, and its heart of fire was going out."
+  },
+  {
+   "id": "v04",
+   "t": 23.14,
+   "text": "So a girl from the village gave it the only light she had."
+  },
+  {
+   "id": "v05",
+   "t": 27.7,
+   "text": "From that night on, they shared one fate."
+  },
+  {
+   "id": "v06",
+   "t": 39.4,
+   "text": "Whenever the dragon flies, her lantern burns."
+  }
+ ]
+}

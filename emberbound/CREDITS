@@ -1,0 +1,10 @@
+Emberbound (Paper-cut Lightbox style, vertical 1080×1920 for YouTube Shorts)
+
+Original story, characters and score. Picture drawn entirely in code (Canvas 2D paper layers);
+no stock footage, no generated images, nothing taken from any existing film.
+
+Third-party assets
+- Samples (CC0): VS Chamber Orchestra: Community Edition (Versilian Studios) and Versilian Community Sample Library (Versilian Studios) — harp, violins, violas, cellos, flute, hand chimes, gong, frame drum
+- Voice: Kokoro TTS (kokoro-onnx, model kokoro-v1.0, voice "bf_emma"), Apache License 2.0 (https://github.com/thewh1teagle/kokoro-onnx)
+- Speech check: faster-whisper with the Whisper "base.en" model (MIT)
+- Font (SIL Open Font License 1.1, via Google Fonts): Cormorant Garamond (Christian Thalmann)
