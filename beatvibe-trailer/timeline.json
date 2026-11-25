@@ -1,0 +1,25 @@
+{
+ "dur": 45.0,
+ "fps": 60,
+ "bpm": 90,
+ "beat": 0.6666667,
+ "bar": 2.6666667,
+ "sections": [
+  {"id": "drop",   "t0": 0.0,     "t1": 5.3333},
+  {"id": "groove", "t0": 5.3333,  "t1": 13.3333},
+  {"id": "lights", "t0": 13.3333, "t1": 18.6667},
+  {"id": "silence","t0": 18.6667, "t1": 21.3333},
+  {"id": "calm",   "t0": 21.3333, "t1": 34.6667},
+  {"id": "resolve","t0": 34.6667, "t1": 45.0}
+ ],
+ "hits": {"drop": 0.6667, "burst": 13.3333, "cut": 18.6667, "bowl": 21.3333, "seal": 42.6667, "lastdrop": 44.0},
+ "vo": [
+  {"id": "v01", "t": 1.30,  "text": "Every beat starts with a single drop."},
+  {"id": "v02", "t": 11.75, "text": "Some beats light up a whole city."},
+  {"id": "v03", "t": 15.10, "text": "Some keep you moving all night long."},
+  {"id": "v04", "t": 22.30, "text": "And some are quiet enough to hear yourself breathe."},
+  {"id": "v05", "t": 28.80, "text": "Beats, chill and healing sound, in one place."},
+  {"id": "v06", "t": 37.05, "text": "BeatVibe Studio."},
+  {"id": "v07", "t": 39.10, "text": "Let the vibes of music connect us."}
+ ]
+}

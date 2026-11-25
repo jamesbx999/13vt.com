@@ -1,0 +1,14 @@
+BeatVibe Studio — "One Drop" (channel trailer, Watercolor Brush style)
+
+Picture: drawn entirely in code (Canvas 2D stroke engine). No stock footage, no generated images.
+Music: original score written for this film, rendered from the sample libraries below plus synthesis.
+
+Third-party assets
+- Drums: "MuldjordKit" by Lars Muldjord (drumgizmo.org), FreePats version, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+- Samples (CC0): FreePats project (freepats.zenvoid.org) — kalimba; VS Chamber Orchestra: Community Edition (Versilian Studios) — flute, upright piano; Versilian Community Sample Library (Versilian Studios) — bowed vibraphone, glockenspiel, claps
+- Voice: Kokoro TTS (kokoro-onnx, model kokoro-v1.0, voice "am_michael"), Apache License 2.0 (https://github.com/thewh1teagle/kokoro-onnx)
+- Speech check: faster-whisper with the Whisper "base.en" model (MIT)
+- Fonts (SIL Open Font License 1.1, via Google Fonts): Cormorant Garamond (Christian Thalmann), Caveat (Impallari Type), IBM Plex Mono (IBM)
+- Paper texture: generated procedurally (paper.py)
+
+"BeatVibe Studio" name, tagline wording and channel description are the channel owner's own.

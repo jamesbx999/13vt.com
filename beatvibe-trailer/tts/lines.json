@@ -1,0 +1,9 @@
+[
+ {"id":"v01","text":"Every beat starts with a single drop.","voice":"am_michael","speed":0.95},
+ {"id":"v02","text":"Some beats light up a whole city.","voice":"am_michael","speed":0.95},
+ {"id":"v03","text":"Some keep you moving all night long.","voice":"am_michael","speed":0.95},
+ {"id":"v04","text":"And some are quiet enough to hear yourself breathe.","voice":"am_michael","speed":0.9},
+ {"id":"v05","text":"Beats, chill and healing sound, in one place.","voice":"am_michael","speed":0.92},
+ {"id":"v06","text":"BeatVibe Studio.","asr":"Beat Vibe Studio.","voice":"am_michael","speed":0.9},
+ {"id":"v07","text":"Let the vibes of music connect us.","voice":"am_michael","speed":0.92}
+]
