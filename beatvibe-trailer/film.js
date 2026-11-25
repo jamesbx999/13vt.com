@@ -3,6 +3,18 @@
 // is washed away by mist, and becomes the still horizon of a lake with a lotus; pull back to the whole sheet.
 // Everything is a pure function of t. Strokes built inside render() use withSeed.
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+// two formats from one source: 16:9 (default) and vertical 9:16 for Shorts (?fmt=v)
+const VERT = /fmt=v/.test(location.search);
+const VW = VERT ? 1080 : 1920, VH = VERT ? 1920 : 1080, CX = VW / 2, CY = VH / 2;
+cv.width = VW; cv.height = VH;
+// screen layout per format
+const L = VERT ? {
+  title: { y: 1036, size: 100, band: [150, 1000, 930, 996] }, tag: 1092, sub: 1172, seal: [540, 862],
+  subs: { y: 1430, size: 50, wrap: 920, lh: 60 }, side: [70, 236], bpm: [330, 400], hz: [560, 600],
+} : {
+  title: { y: 778, size: 108, band: [560, 742, 1370, 738] }, tag: 830, sub: 900, seal: [1452, 742],
+  subs: { y: 1010, size: 40, wrap: 1700, lh: 48 }, side: [86, 104], bpm: [1180, 196], hz: [1190, 250],
+};
 window.DUR = 45.0;
 let TL, VODUR, PAPER_IMG;
 const ACC = '#c8442a';                 // the one accent: the drop, the beat marker, the seal
@@ -12,13 +24,23 @@ const NIGHT = ['#3e4a6b', '#4a5578', '#56628a', '#45506f'];
 const BEAT = 2 / 3, B0 = 5.3333;
 
 // ---------- camera (world → screen: (w - cam) * Z + centre) ----------
-const camX = monotone([[0, 1100], [5.33, 1100], [13.33, 3000], [18.67, 4300], [21.33, 5000], [27.5, 7000], [34.67, 7300], [37.0, 4450], [45, 4450]]);
-const camY = monotone([[0, 560], [19.2, 560], [21.8, 420], [23.2, 420], [27.5, 640], [34.67, 690], [37.0, 880], [45, 880]]);
-const camZ = monotone([[0, 1.0], [5.33, 1.04], [8, 1.0], [13.33, 1.0], [18.67, 1.15], [21.33, 1.0], [27.5, 1.0], [34.67, 1.9], [37.0, .21], [45, .21]]);
-const LHk = monotone([[0, 760], [.9, 760], [5.33, 2350], [13.33, 4300], [18.67, 5600], [21.33, 6200], [27.5, 8200], [34.67, 8300], [36.6, 9050]]);
-const cam = t => ({ x: camX(t), y: camY(t), z: camZ(t) });
-const toS = (c, wx, wy) => [(wx - c.x) * c.z + 960, (wy - c.y) * c.z + 540];
-function worldT(c) { ctx.setTransform(c.z, 0, 0, c.z, 960 - c.x * c.z, 540 - c.y * c.z); }
+const camX = VERT ? monotone([[0, 1000], [5.33, 1000], [13.33, 2950], [18.67, 4250], [21.33, 5000], [27.5, 7000], [34.67, 7300], [37.0, 4900], [45, 4900]])
+  : monotone([[0, 1100], [5.33, 1100], [13.33, 3000], [18.67, 4300], [21.33, 5000], [27.5, 7000], [34.67, 7300], [37.0, 4450], [45, 4450]]);
+const camY = VERT ? monotone([[0, 560], [19.2, 560], [21.8, 380], [23.2, 380], [27.5, 620], [34.67, 690], [37.0, 2105], [45, 2105]]) : monotone([[0, 560], [19.2, 560], [21.8, 420], [23.2, 420], [27.5, 640], [34.67, 690], [37.0, 880], [45, 880]]);
+const camZ = VERT ? monotone([[0, 1.5], [5.33, 1.56], [8, 1.5], [13.33, 1.5], [18.67, 1.7], [21.33, 1.5], [27.5, 1.5], [34.67, 2.5], [37.0, .16], [45, .16]]) : monotone([[0, 1.0], [5.33, 1.04], [8, 1.0], [13.33, 1.0], [18.67, 1.15], [21.33, 1.0], [27.5, 1.0], [34.67, 1.9], [37.0, .21], [45, .21]]);
+const LHk = VERT ? monotone([[0, 760], [.9, 760], [5.33, 1550], [8, 2150], [13.33, 3560], [18.67, 4830], [21.33, 5610], [27.5, 7610], [34.67, 7900], [36.6, 8400]]) : monotone([[0, 760], [.9, 760], [5.33, 2350], [13.33, 4300], [18.67, 5600], [21.33, 6200], [27.5, 8200], [34.67, 8300], [36.6, 9050]]);
+const cam = t => {
+  const z = camZ(t);
+  if (t > 34.67 && t < 37) {   // pull-back: keep the lotus on a smooth screen path while zooming out
+    const zA = camZ(34.67), zB = camZ(37), u = eio(seg(t, 34.67, 37));
+    const sxA = (7300 - camX(34.67)) * zA + CX, syA = (676 - camY(34.67)) * zA + CY;
+    const sxB = (7300 - camX(37)) * zB + CX, syB = (676 - camY(37)) * zB + CY;
+    return { x: 7300 - (lerp(sxA, sxB, u) - CX) / z, y: 676 - (lerp(syA, syB, u) - CY) / z, z };
+  }
+  return { x: camX(t), y: camY(t), z };
+};
+const toS = (c, wx, wy) => [(wx - c.x) * c.z + CX, (wy - c.y) * c.z + CY];
+function worldT(c) { ctx.setTransform(c.z, 0, 0, c.z, CX - c.x * c.z, CY - c.y * c.z); }
 function screenT() { ctx.setTransform(1, 0, 0, 1, 0, 0); }
 
 // ---------- world contents ----------
@@ -174,7 +196,7 @@ function wavyClipX(xEdge, y0, y1, amp, ph) {   // reveal everything left of a wa
   for (let y = y0; y <= y1; y += 30) ctx.lineTo(xEdge + (vnoise(y * .01 + ph) - .5) * amp, y);
   ctx.lineTo(-1e5, y1); ctx.closePath(); ctx.clip();
 }
-function visible(c, x0, x1, y0, y1) { const [a, b] = toS(c, x0, y0), [d, e] = toS(c, x1, y1); return d > -40 && a < W + 40 && e > -40 && b < H + 40; }
+function visible(c, x0, x1, y0, y1) { const [a, b] = toS(c, x0, y0), [d, e] = toS(c, x1, y1); return d > -40 && a < VW + 40 && e > -40 && b < VH + 40; }
 
 function buildingP(b, t) {
   if (t > 35) return ss(seg(t, 35.0 + (b.x0 - CITY0) / (CITY1 - CITY0) * 2.0, 35.6 + (b.x0 - CITY0) / (CITY1 - CITY0) * 2.0));
@@ -207,10 +229,10 @@ function drawCity(t, c, am) {
 function drawMist(t) {
   const c = eio(seg(t, 18.8, 21.2)); if (c <= 0 || c >= 1) return;
   for (const [lift, a] of [[140, .55], [0, 1]]) {
-    const top = 1180 - c * 1450 - lift;
-    ctx.save(); ctx.beginPath(); ctx.moveTo(-10, 1100);
-    for (let x = -10; x <= W + 40; x += 40) ctx.lineTo(x, top + (vnoise(x * .006 + lift) - .5) * 170 + Math.sin(x * .01 + t) * 12);
-    ctx.lineTo(W + 10, 1100); ctx.closePath(); ctx.clip(); ctx.globalAlpha = a; ctx.drawImage(PAPER_IMG, 0, 0); ctx.restore();
+    const top = VH + 100 - c * (VH + 370) - lift;
+    ctx.save(); ctx.beginPath(); ctx.moveTo(-10, VH + 20);
+    for (let x = -10; x <= VW + 40; x += 40) ctx.lineTo(x, top + (vnoise(x * .006 + lift) - .5) * 170 + Math.sin(x * .01 + t) * 12);
+    ctx.lineTo(VW + 10, VH + 20); ctx.closePath(); ctx.clip(); ctx.globalAlpha = a; ctx.drawImage(PAPER_IMG, 0, 0); ctx.restore();
   }
 }
 
@@ -299,8 +321,8 @@ function leader(x0, y0, x1, y1, p, bend = 20, a = .75) {
 }
 const NOTES = [
   // [t0, t1, text, labelX, labelY, anchor(t) → screen point]
-  [8.4, 13.0, '90 BPM · the groove', 1180, 196, t => { const [x, y] = markerPos(t); return toS(cam(t), x, y - 14); }],
-  [30.2, 34.4, '528 Hz · calm', 1190, 250, t => toS(cam(t), 7318, 600)],
+  [8.4, 13.0, '90 BPM · the groove', L.bpm[0], L.bpm[1], t => { const [x, y] = markerPos(t); return toS(cam(t), x, y - 14); }],
+  [30.2, 34.4, '528 Hz · calm', L.hz[0], L.hz[1], t => toS(cam(t), 7318, 600)],
 ];
 function drawNotes(t) {
   for (const [t0, t1, txt, lx, ly, anc] of NOTES) {
@@ -314,15 +336,16 @@ function drawSides(t) {
   for (const [t0, t1, a, b, col] of SIDES) {
     const f = ss(seg(t, t0, t0 + .6)) * (1 - ss(seg(t, t1 - .5, t1))); if (f <= 0) continue;
     ctx.globalAlpha = f;
-    withSeed(5, () => drawS(ctx, mk(qcurve(86, 104, 150, 104, 0, 6), 13, col, { prof: 'even', nb: 3 }), seg(t, t0, t0 + .5)));
+    const [sx, sy] = L.side;
+    withSeed(5, () => drawS(ctx, mk(qcurve(sx, sy, sx + 64, sy, 0, 6), 13, col, { prof: 'even', nb: 3 }), seg(t, t0, t0 + .5)));
     ctx.font = '400 19px "IBM Plex Mono"'; ctx.letterSpacing = '5px'; ctx.fillStyle = rgba(INK, .85); ctx.textBaseline = 'middle';
-    ctx.fillText(a, 168, 104); ctx.font = 'italic 500 34px "Cormorant Garamond"'; ctx.letterSpacing = '0px'; ctx.fillText(b.toLowerCase().replace(/ · /g, ' · '), 86, 150);
+    ctx.fillText(a, sx + 82, sy); ctx.font = 'italic 500 34px "Cormorant Garamond"'; ctx.letterSpacing = '0px'; ctx.fillText(b.toLowerCase(), sx, sy + 46);
     ctx.globalAlpha = 1;
   }
 }
 
 // ---------- title, seal, ending ----------
-const SEAL = [1452, 742];
+const SEAL = L.seal;
 let TBAND;
 function drawTitle(t) {
   if (t < 36.6) return;
@@ -330,14 +353,14 @@ function drawTitle(t) {
   if (pb > 0) drawS(ctx, TBAND, pb);
   const pt = seg(t, 36.9, 38.1);
   if (pt > 0) {
-    ctx.save(); ctx.font = '600 108px "Cormorant Garamond"'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.save(); ctx.font = `600 ${L.title.size}px "Cormorant Garamond"`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     const w = ctx.measureText('BeatVibe Studio').width;
-    ctx.beginPath(); ctx.rect(960 - w / 2 - 10, 600, (w + 20) * eo(pt), 220); ctx.clip();
-    ctx.shadowColor = rgba(PAPER, .9); ctx.shadowBlur = 14; ctx.fillStyle = rgba(INK, .94); ctx.fillText('BeatVibe Studio', 960, 778); ctx.restore();
+    ctx.beginPath(); ctx.rect(CX - w / 2 - 10, L.title.y - 178, (w + 20) * eo(pt), 220); ctx.clip();
+    ctx.shadowColor = rgba(PAPER, .9); ctx.shadowBlur = 14; ctx.fillStyle = rgba(INK, .94); ctx.fillText('BeatVibe Studio', CX, L.title.y); ctx.restore();
   }
   const pm = ss(seg(t, 38.3, 38.9));
-  if (pm > 0) { ctx.save(); ctx.globalAlpha = pm; ctx.font = '400 20px "IBM Plex Mono"'; ctx.letterSpacing = '7px'; ctx.textAlign = 'center'; ctx.fillStyle = rgba(INK, .8); ctx.fillText('BEATS · CHILL · HEALING SOUND', 960, 830); ctx.restore(); }
-  hand('Subscribe — let’s make beats together', 960, 900, seg(t, 39.4, 40.5), { size: 46, align: 'center', col: INK });
+  if (pm > 0) { ctx.save(); ctx.globalAlpha = pm; ctx.font = '400 20px "IBM Plex Mono"'; ctx.letterSpacing = '7px'; ctx.textAlign = 'center'; ctx.fillStyle = rgba(INK, .8); ctx.fillText('BEATS · CHILL · HEALING SOUND', CX, L.tag); ctx.restore(); }
+  hand('Subscribe — let’s make beats together', CX, L.sub, seg(t, 39.4, 40.5), { size: 46, align: 'center', col: INK });
   // seal: stamped on the downbeat
   const ps = t - 42.667;
   if (ps >= 0) {
@@ -353,14 +376,22 @@ function drawTitle(t) {
 }
 
 // ---------- subtitles ----------
+function wrapText(txt, maxW) {      // two balanced lines when one is too wide
+  if (ctx.measureText(txt).width <= maxW) return [txt];
+  const w = txt.split(' '); let best = null;
+  for (let i = 1; i < w.length; i++) { const a = w.slice(0, i).join(' '), b = w.slice(i).join(' '), m = Math.max(ctx.measureText(a).width, ctx.measureText(b).width); if (!best || m < best[0]) best = [m, a, b]; }
+  return [best[1], best[2]];
+}
 function subWin(v) { const d = VODUR[v.id]; return [v.t - .1, v.t + Math.max(1.8, d + .6)]; }
 function drawSubs(t) {
   for (const v of TL.vo) {
     const [a, b] = subWin(v); if (t < a || t > b) continue;
     const f = ss(seg(t, a, a + .25)) * (1 - ss(seg(t, b - .3, b)));
-    ctx.save(); ctx.font = 'italic 500 40px "Cormorant Garamond"'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.save(); ctx.font = `italic 500 ${L.subs.size}px "Cormorant Garamond"`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.shadowColor = rgba(PAPER, .95); ctx.shadowBlur = 18; ctx.fillStyle = rgba(INK, .8 * f);
-    ctx.fillText(v.text, 960, 1010); ctx.fillText(v.text, 960, 1010); ctx.restore();
+    const lines = wrapText(v.text, L.subs.wrap);
+    lines.forEach((ln, i) => { const y = L.subs.y - (lines.length - 1 - i) * L.subs.lh; ctx.fillText(ln, CX, y); ctx.fillText(ln, CX, y); });
+    ctx.restore();
   }
 }
 
@@ -372,7 +403,7 @@ function render(t) {
   ctx.setTransform(ek, 0, 0, ek, SEAL[0] * (1 - ek), SEAL[1] * (1 - ek));
   const base = ctx.getTransform();
   const c = cam(t);
-  const wt = () => { ctx.setTransform(base); ctx.transform(c.z, 0, 0, c.z, 960 - c.x * c.z, 540 - c.y * c.z); };
+  const wt = () => { ctx.setTransform(base); ctx.transform(c.z, 0, 0, c.z, CX - c.x * c.z, CY - c.y * c.z); };
   wt();
   drawLake(t, c);
   if (t < 21.3 || t > 35) drawCity(t, c, t > 35 ? .62 : 1);
@@ -387,10 +418,10 @@ window.render = render;
 window.TEXTS = t => {
   const out = [];
   for (const [t0, t1, txt, lx, ly] of NOTES) if (t >= t0 + .3 && t < t1) { ctx.font = '500 44px Caveat'; const w = ctx.measureText(txt).width; out.push({ id: txt, text: txt, x0: lx, y0: ly - 30, x1: lx + w, y1: ly + 30 }); }
-  for (const [t0, t1, a, b] of SIDES) if (t >= t0 && t < t1) out.push({ id: a, text: a + ' ' + b, x0: 86, y0: 90, x1: 700, y1: 170 });
-  if (t >= 36.9) out.push({ id: 'title', text: 'BeatVibe Studio', x0: 560, y0: 690, x1: 1360, y1: 790 });
-  if (t >= 38.3) out.push({ id: 'tag', text: 'BEATS · CHILL · HEALING SOUND', x0: 600, y0: 815, x1: 1320, y1: 845 });
-  if (t >= 39.4) out.push({ id: 'sub', text: 'Subscribe — let’s make beats together', x0: 620, y0: 870, x1: 1300, y1: 930 });
+  for (const [t0, t1, a, b] of SIDES) if (t >= t0 && t < t1) out.push({ id: a, text: a + ' ' + b, x0: L.side[0], y0: L.side[1] - 14, x1: L.side[0] + 520, y1: L.side[1] + 66 });
+  if (t >= 36.9) out.push({ id: 'title', text: 'BeatVibe Studio', x0: CX - 380, y0: L.title.y - 88, x1: CX + 380, y1: L.title.y + 12 });
+  if (t >= 38.3) out.push({ id: 'tag', text: 'BEATS · CHILL · HEALING SOUND', x0: CX - 360, y0: L.tag - 15, x1: CX + 360, y1: L.tag + 15 });
+  if (t >= 39.4) out.push({ id: 'sub', text: 'Subscribe — let’s make beats together', x0: CX - 340, y0: L.sub - 30, x1: CX + 340, y1: L.sub + 30 });
   return out;
 };
 
@@ -409,10 +440,10 @@ function events() {
 (async () => {
   TL = await (await fetch('timeline.json')).json();
   VODUR = await (await fetch('voices/dur.json')).json();
-  PAPER_IMG = new Image(); PAPER_IMG.src = 'paper.jpg'; await PAPER_IMG.decode();
+  PAPER_IMG = new Image(); PAPER_IMG.src = VERT ? 'paper_v.jpg' : 'paper.jpg'; await PAPER_IMG.decode();
   await Promise.all(['500 44px Caveat', '600 108px "Cormorant Garamond"', 'italic 500 40px "Cormorant Garamond"', '400 20px "IBM Plex Mono"'].map(f => document.fonts.load(f)));
   withSeed(11, buildCity); withSeed(12, buildLine); withSeed(13, buildBloom); withSeed(14, buildLake); withSeed(15, buildLotus);
-  TBAND = withSeed(16, () => mk(qcurve(560, 742, 1370, 738, -6, 16), 118, '#c9d6da', { prof: 'brush', nb: 8, a: .55, rough: .3 }));
+  TBAND = withSeed(16, () => mk(qcurve(...L.title.band, -6, 16), 118, '#c9d6da', { prof: 'brush', nb: 8, a: .55, rough: .3 }));
   // when each building starts and finishes painting (for windows and the brush foley)
   for (const b of [...FRONT, ...BACK]) { b.paintT = 99; b.paintT0 = 99; for (let t = 0; t < 34; t += 1 / 60) { const p = clamp((LHk(t) - 240 - b.x0) / 430 - (b.kind === 'back' ? -.25 : 0)); if (p > 0 && b.paintT0 === 99) b.paintT0 = t; if (p >= 1) { b.paintT = t; break; } } }
   window.EV = events();

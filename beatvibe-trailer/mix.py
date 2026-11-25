@@ -111,8 +111,19 @@ music = S.room(music, size=.5, mix=.2)
 # the silence: music fully out on the cut, back on the bowl
 music *= fade_env(N, [(0, 1), (TL['hits']['cut'] - .05, 1), (TL['hits']['cut'] + .02, 0), (TL['hits']['bowl'] - .01, 0), (TL['hits']['bowl'], 1), (DUR, 1)])[:, None]
 music = np.concatenate([music, np.zeros((max(0, N - len(music)), 2))])[:N]
-# the groove carries the energy of the film: lift it against the calm half
-music *= fade_env(N, [(0, 1), (5.2, 1), (5.33, 2.1), (13.3, 2.1), (13.33, 2.4), (18.67, 2.4), (18.7, 1), (DUR, 1)])[:, None]
+# a track supplied by the user replaces the score (MUSIC=<file>, MUSIC_START=<seconds into the track>)
+if os.environ.get('MUSIC'):
+    y, ysr = sf.read(os.environ['MUSIC'], always_2d=True)
+    y = resample_poly(y, SR, ysr, axis=0) if ysr != SR else y
+    if y.shape[1] == 1: y = np.repeat(y, 2, 1)
+    i0 = int(float(os.environ.get('MUSIC_START', 0)) * SR); y = y[i0:i0 + N, :2]
+    y = np.concatenate([y, np.zeros((N - len(y), 2))]) if len(y) < N else y
+    y = y * fade_env(N, [(0, 0), (.05, 1), (DUR - 2.5, 1), (DUR, 0)])[:, None]
+    # keep the film's turn: the music dips to near-silence while the mist washes the city away
+    y *= fade_env(N, [(0, 1), (TL['hits']['cut'] - .3, 1), (TL['hits']['cut'] + .4, .06), (TL['hits']['bowl'] - .4, .06), (TL['hits']['bowl'] + .6, 1), (DUR, 1)])[:, None]
+    music = y / (rms(y) + 1e-9) * rms(music)
+# the groove carries the energy of the film: lift it against the calm half (original score only)
+if not os.environ.get('MUSIC'): music *= fade_env(N, [(0, 1), (5.2, 1), (5.33, 2.1), (13.3, 2.1), (13.33, 2.4), (18.67, 2.4), (18.7, 1), (DUR, 1)])[:, None]
 
 # ============ ambience + foley ============
 sfx = np.zeros((N, 2))
@@ -186,7 +197,7 @@ vo = vo * .88 + np.stack([fftconvolve(vo[:, 0], ir)[:N], fftconvolve(vo[:, 1], i
 mix = music + sfx * 1.0 + vo
 mix = limit(mix / np.abs(mix).max() * .89, .9)
 os.makedirs(f'{HERE}/out', exist_ok=True)
-sf.write(f'{HERE}/out/mix.wav', mix.astype(np.float32), SR)
+sf.write(sys.argv[1] if len(sys.argv) > 1 else f'{HERE}/out/mix.wav', mix.astype(np.float32), SR)
 for name, x in [('music', music), ('sfx', sfx), ('voice', vo)]: print(name, 'rms dB', round(20 * np.log10(rms(x)), 1))
 inst = sorted({e[1] if isinstance(e, tuple) else e['inst'] for e in ev})
 open(f'{HERE}/out/instruments.json', 'w').write(json.dumps(inst))
