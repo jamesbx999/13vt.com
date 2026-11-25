@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="fonts.css">
+<style>html,body{margin:0;background:#07060a}canvas{display:block}</style></head><body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// Shorts cover: the dragon crossing the moon (film frame 40.3 s) + the paper-cut title (frame 42.0 s) + a tagline
+const c = document.getElementById('c'), g = c.getContext('2d'); window.DUR = 1;
+const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = s; });
+let A, B, C;
+window.render = () => {
+  g.drawImage(B, 0, 0);                                               // frame 42.0 s: title lit, camera at rest
+  g.drawImage(A, 0, 0, 1080, 600, 0, 0, 1080, 600);                   // frame 40.3 s: the dragon across the moon
+  for (let k = 0; k < 10; k++) { g.globalAlpha = 1 - (k + 1) / 11; g.drawImage(A, 0, 600 + k * 10, 1080, 10, 0, 600 + k * 10, 1080, 10); } g.globalAlpha = 1;
+  g.save(); g.translate(0, 1460); g.scale(1, -1); g.drawImage(B, 132, 80, 816, 40, 132, 80, 816, 40); g.restore();   // wood edge, mirrored from the top
+  g.fillStyle = '#07060a'; g.fillRect(0, 1380, 1080, 540);           // clear the subtitle area
+  const sp = g.createRadialGradient(540, 1400, 0, 540, 1400, 700); sp.addColorStop(0, 'rgba(255,184,98,.16)'); sp.addColorStop(1, 'rgba(255,184,98,0)'); g.fillStyle = sp; g.fillRect(0, 1380, 1080, 540);
+  g.textAlign = 'center'; g.shadowColor = 'rgba(255,170,80,.55)'; g.shadowBlur = 24; g.fillStyle = '#f6e6c8';
+  g.font = '600 92px "Cormorant Garamond"'; g.fillText('A girl. A dragon.', 540, 1530);
+  g.font = 'italic 500 96px "Cormorant Garamond"'; g.fillStyle = '#ffb862'; g.fillText('One fate.', 540, 1650);
+  g.shadowBlur = 0; g.font = '400 30px "Cormorant Garamond"'; g.letterSpacing = '10px'; g.fillStyle = 'rgba(246,230,200,.7)'; g.fillText('A PAPER-CUT LEGEND', 545, 1760);
+};
+(async () => { [A, B, C] = await Promise.all([load('base.png'), load('title.png'), load('clean.png')]); await document.fonts.load('600 92px "Cormorant Garamond"'); await document.fonts.load('italic 500 96px "Cormorant Garamond"'); window.READY = true; })();
+</script></body></html>
